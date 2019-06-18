@@ -1,0 +1,71 @@
+/*********************
+*Project: TUBShell
+*Description: a private shell for OS command by C
+*Author: DJM ZHJ WQ
+*Create Time: 2019.6.18
+**********************/
+#include <stdio.h>
+#include <string.h>
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 用户进入TUBShell的入口声明*/
+/***** Info *****/
+void sayHello(){
+	/* Note: 打印表面进入了TUBShell的控制*/
+	printf("This is TUBShell\n");
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 打印前缀(每一次命令的开始)*/
+/***** Info *****/
+void printPrefix(){
+	/* Note: 打印的前缀分三部分 [\u@\h \f]*/
+	/*第一部分,\u,用户名*/
+	/*第二部分,\h,主机名*/
+	/*第三部分,\f,当前所在的目录名或文件名*/
+	char user[20] = "root",
+		host[20] = "localhost",
+		folder[20] = "home!!";
+	printf("[TUBShell %s@%s %s]", user, host, folder);
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 等待输入命令,并获取命令信息*/
+/***** Info *****/
+int getInputCommand(){
+	/* Note: 注意命令输入的结束符号 */
+	int i;
+	int __switch = 1;
+	char __content[] = "";
+	char __exit[] = "exit"; 
+
+	scanf("%s", &__content);
+	printf("command \'%s\' no exist\n", __content);
+	if(!strcmp(__content, __exit)){
+		__switch = 0;
+	}
+	return __switch;
+}
+
+
+/***** Info *****/
+/* Author: none */
+/* Function: none*/
+/***** Info *****/
+void example(){
+	/* Note: printf something */
+	printf("Hello World\n");
+}
+
+int main(){
+	int running_switch = 1;
+	sayHello();
+	while(running_switch){
+		printPrefix();
+		running_switch = getInputCommand();	
+	}
+	return 0;
+}
