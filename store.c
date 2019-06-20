@@ -34,17 +34,29 @@ char * store_promptGet(char * index){
     * 形参index 为 username hostname leaflist root
     * 否则返回无此下标的提示
     ************** */
-    static char ret[MAX_NAME_LEN/2] = "";
-    strcpy(ret ,"\"no exit such index\"");
-    if(!strcmp("username", index))
-        strcpy(ret, TubShellPrompt->username);
-    if(!strcmp("hostname", index))
-        strcpy(ret, TubShellPrompt->hostname);
-    if(!strcmp("leaflist", index))
-        strcpy(ret, TubShellPrompt->leaflist);
-    if(!strcmp("root", index))
-        strcpy(ret ,TubShellPrompt->root);
-    return ret;
+    static char ret1[MAX_NAME_LEN/2] = "";
+    static char ret2[MAX_NAME_LEN/2] = "";
+    static char ret3[MAX_NAME_LEN/2] = "";
+    static char ret4[1] = "";
+    //strcpy(ret ,"\"no exit such index\"");
+
+    if(!strcmp("username", index)){
+        strcpy(ret1, TubShellPrompt->username);
+	return ret1;
+    }
+    if(!strcmp("hostname", index)){
+        strcpy(ret2, TubShellPrompt->hostname);
+	return ret2;
+    }
+    if(!strcmp("leaflist", index)){
+        strcpy(ret3, TubShellPrompt->leaflist);
+	return ret3;
+    }
+    if(!strcmp("root", index)){
+        strcpy(ret4 ,TubShellPrompt->root);
+    	return ret4;
+    }
+    return "\"no exit such index\"";
 }
 
 /***** Info *****/

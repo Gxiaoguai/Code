@@ -23,7 +23,7 @@
 void sayHello();        //进入提示
 void printPrefix();     //打印段前缀
 int getInputCommand();  //获取输入命令
-
+void getprompt_wq();	//获取用户信息
 void shell();           //shell的总入口
 
 /****** 函数实现 ******/
@@ -43,10 +43,23 @@ void printPrefix(){
 	/*第一部分,\u,用户名*/
 	/*第二部分,\h,主机名*/
 	/*第三部分,\f,当前所在的目录名或文件名*/
-	char user[MAX_CMD_LEN] = "root",
-	host[MAX_CMD_LEN] = "localhost",
-	folder[MAX_CMD_LEN] = "xx";
-	printf("[TUBShell %s@%s %s]", user, host, folder);
+
+	getprompt_wq();		/* 先取得OS的前缀信息 */
+	char * user, * host, * folder, * root;
+	user = (char *)malloc(MAX_NAME_LEN / 2);
+	host = (char *)malloc(MAX_NAME_LEN / 2);
+	folder = (char *)malloc(MAX_NAME_LEN / 2);
+	root = (char *)malloc(sizeof(char));
+
+	user = store_promptGet("username");
+	host = store_promptGet("hostname");
+	folder = "***";
+	root = store_promptGet("root");
+	printf("[TUBShell %s@%s:%s]%s ",user, host, folder, root);
+	//free(user);
+	//free(host);
+	//free(folder);
+	//free(root);
 }
 
 /***** Info *****/
@@ -61,7 +74,9 @@ int getInputCommand(){
 	char __exit[5] = "exit";
 
 	scanf("%s", __content);
-	printf("command \'%s\' no exist\n", __content);
+	if(strcmp(__content, __exit)){
+		printf("command \'%s\' no exist\n", __content);
+	}
 	if(!strcmp(__content, __exit)){
 		__switch = 0;
 	}
@@ -110,10 +125,9 @@ void shell(){
 
 int main(){
     /* 测试区 */
-    store_promptiPrintAll();
-    getprompt_wq();
-    store_promptiPrintAll();
-    return 0;
+    //getprompt_wq();
+    //printf("this is %s\n",store_promptGet("username"));
+    //return 0;
     /* 测试区 */
 
     shell();
