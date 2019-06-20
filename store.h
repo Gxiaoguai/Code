@@ -28,14 +28,14 @@ extern void store_commandPrintAll();                   //打印历史命令信息
 *
 *
 *store_promptGet（char * index）
-*形参index 为 username hostname leaflist root的字符串下标
+*形参index 为 username hostname pathname root的字符串下标
 *eg:store_promptGet("username")从存储结构体获得username
 *注意函数返回类型的接受
 *
 *
 *store_promptPut(int id, char * data)
 *更改段前缀,id 为 1 2 3 4 分别对应修改
-*username ，hostname，leaflist，root
+*username ，hostname，pathname，root
 *eg:store_promptPut(1, "xuzhiguang")
 *eg:store_promptPut(4, "#")
 *

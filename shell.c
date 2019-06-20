@@ -7,6 +7,7 @@
 
 /****** 库调用 ******/
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <pwd.h>
 #include <sys/types.h>
@@ -14,16 +15,21 @@
 #include <malloc.h>
 //#include "DbLinkList.h"
 
-/*** 自定义模块 ***/
+/****** 自定义模块 ******/
 #include "store.h"
 
 #define MAX_NAME_LEN 100 
-#define MAX_CMD_LEN 100 
+#define MAX_CMD_LEN 100
+#define MAX_PATH_LEN 100
+
+/****** 全局量 ******/
+char commandCompose[10][MAX_CMD_LEN / 2];	/* 分割后的命令组成多字符串数组 */
 
 /****** 函数声明 ******/
 void sayHello();        //进入提示
 void printPrefix();     //打印段前缀
 int getInputCommand();  //获取输入命令
+void pipe_zhj();	//管道通信
 void getprompt_wq();	//获取用户信息
 void shell();           //shell的总入口
 
@@ -54,7 +60,7 @@ void printPrefix(){
 
 	user = store_promptGet("username");
 	host = store_promptGet("hostname");
-	folder = "***";
+	folder = store_promptGet("pathname");
 	root = store_promptGet("root");
 	printf("[TUBShell %s@%s:%s]%s ",user, host, folder, root);
 	//free(user);
@@ -64,6 +70,11 @@ void printPrefix(){
 }
 
 /***** Info *****/
+/* Author: ZHJ */
+/* Function: 实现管道*/
+void pipe_zhj(){}
+
+/***** Info *****/
 /* Author: DJM */
 /* Function: 获取输入的命令,并决定调用*/
 int getInputCommand(){
@@ -71,7 +82,6 @@ int getInputCommand(){
 	int i = 0, j = 0;		/* 用于for循环 */
 	int __switch = 1;		/* shell退出开关 */
 	char contentStr[100];		/* 存输入的数组 */
-	char commandCompose[10][MAX_CMD_LEN / 2];	/* 分割后的命令组成多字符串数组 */
 	char strtmp[MAX_CMD_LEN / 2];
 
 	strcpy(contentStr, " ");	/* init */
@@ -137,20 +147,30 @@ int getInputCommand(){
 /* Author: WQ */
 /* Function: 从OS获知部分前缀信息并放入存储区 */
 void getprompt_wq(){
-    	/* Note: 获取用户名，主机，超级用户确认*/
+    /* Note: 获取用户名，主机，当前目录，超级用户确认*/
 
-    	/* 获取用户名 */
+    /* 获取用户名 */
 	struct passwd *my_info;
 	int uid = getuid();         //返回用户id
 	my_info = getpwuid(uid);    //通过用户的uid查找用户的passwd数据
 	store_promptPut(1, my_info->pw_name);
 
-    	/* 获取主机名 */
+    /* 获取主机名 */
 	char hostname[MAX_NAME_LEN];
 	gethostname(hostname, sizeof(hostname));
 	store_promptPut(2, hostname);
-
-    	/* 确认是否为超级用户 */
+	
+	/* 获取当前目录 */
+	char pathname[MAX_PATH_LEN];
+	getcwd(pathname, MAX_PATH_LEN);
+	if (strncmp(pathname, my_info->pw_dir, strlen(my_info->pw_dir)) == 0){//比较两条路径
+		sprintf(pathname, "%s%s", "~", &pathname[strlen(my_info->pw_dir)]);
+		store_promptPut(3, pathname);
+	} else{
+		store_promptPut(3, pathname);
+	}
+	
+    /* 确认是否为超级用户 */
 	if (uid == 0) {
 		store_promptPut(4, "#");
 	}

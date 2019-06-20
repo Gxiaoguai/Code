@@ -8,7 +8,7 @@
 struct Prompt{
     char username[MAX_NAME_LEN/2];
     char hostname[MAX_NAME_LEN/2];
-    char leaflist[MAX_NAME_LEN/2];
+    char pathname[MAX_NAME_LEN/2];
     char root[1];
     int num;
 };
@@ -22,7 +22,7 @@ void store_promptInit(){
     /* Note: 此函数为方便测试而存在 */
     strcpy(TubShellPrompt->username, "root2019");
     strcpy(TubShellPrompt->hostname, "localhost");
-    strcpy(TubShellPrompt->leaflist, "/");
+    strcpy(TubShellPrompt->pathname, "/");
     strcpy(TubShellPrompt->root, "0");
 }
 
@@ -32,7 +32,7 @@ void store_promptInit(){
 char * store_promptGet(char * index){
     /* Note: */
     /* **************
-    * 形参index 为 username hostname leaflist root
+    * 形参index 为 username hostname pathname root
     * 否则返回无此下标的提示
     ************** */
     static char ret1[MAX_NAME_LEN/2] = "";
@@ -49,8 +49,8 @@ char * store_promptGet(char * index){
         strcpy(ret2, TubShellPrompt->hostname);
 	return ret2;
     }
-    if(!strcmp("leaflist", index)){
-        strcpy(ret3, TubShellPrompt->leaflist);
+    if(!strcmp("pathname", index)){
+        strcpy(ret3, TubShellPrompt->pathname);
 	return ret3;
     }
     if(!strcmp("root", index)){
@@ -67,7 +67,7 @@ void store_promptPut(int id, char * data){
     /* Note: */
     /* **************
     * id 为 1 2 3 4 分别对应修改
-    * username ，hostname，leaflist，root
+    * username ，hostname，pathname，root
     * data为要赋的串值
     ************** */
     switch(id){
@@ -78,7 +78,7 @@ void store_promptPut(int id, char * data){
             strcpy(TubShellPrompt->hostname, data);
             break;
         case 3:
-            strcpy(TubShellPrompt->leaflist, data);
+            strcpy(TubShellPrompt->pathname, data);
             break;
         case 4:
             strcpy(TubShellPrompt->root, data);
@@ -92,7 +92,7 @@ void store_promptPut(int id, char * data){
 void store_promptiPrintAll(){
     printf("username is %s\n", TubShellPrompt->username);
     printf("hostname is %s\n", TubShellPrompt->hostname);
-    printf("leaflist is %s\n", TubShellPrompt->leaflist);
+    printf("pathname is %s\n", TubShellPrompt->pathname);
     printf("root ? %s\n", TubShellPrompt->root);
 }
 
