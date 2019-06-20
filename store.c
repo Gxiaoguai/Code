@@ -1,5 +1,6 @@
 
 #define MAX_NAME_LEN 100
+#define MAX_CMD_LEN 100
 
 /***** Info *****/
 /* Author: DJM */
@@ -17,7 +18,7 @@ static struct Prompt *TubShellPrompt = &ShellPrompt;
 /***** Info *****/
 /* Author: DJM */
 /* Function: 段前缀初始化*/
-void store_promptiInit(){
+void store_promptInit(){
     /* Note: 此函数为方便测试而存在 */
     strcpy(TubShellPrompt->username, "root2019");
     strcpy(TubShellPrompt->hostname, "localhost");
@@ -95,6 +96,59 @@ void store_promptiPrintAll(){
     printf("root ? %s\n", TubShellPrompt->root);
 }
 
+
+
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 共享的历史命令 */
+char commandHistory[100][MAX_CMD_LEN / 2];
+
+/***** Info *****/
+/* Author: DJM */
+/* Function:  */
+void store_commandInit(){
+	int i;
+	for(i = 0; i < 100; i ++)
+		strcpy(commandHistory[i], "none");
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function:  */
+char * store_commandGet(int i){
+	int j = 99;
+	while(!strcmp(commandHistory[j], "none")){
+		j--;
+	}
+	if((j - i + 1) >= 0)
+		return commandHistory[j - i + 1];
+	else
+		return "error";
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 每次都在数组后面插入最新的命令 */
+void store_commandPut(char * data){
+	int i = 0;	
+	while(strcmp(commandHistory[i], "none")){
+		i++;
+	}
+	strcpy(commandHistory[i], data);
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function:  */
+void store_commandPrintAll(){
+	int i;
+	for(i = 99; i >=0 ; i--){
+		//if(!strcmp(commandHistory[i], "none")){
+			printf("cmd %d is \'%s\'\n", i, commandHistory[i]);
+		//}
+	}
+}
 
 
 

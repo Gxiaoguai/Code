@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <malloc.h>
+//#include "DbLinkList.h"
 
 /*** 自定义模块 ***/
 #include "store.h"
@@ -64,24 +65,71 @@ void printPrefix(){
 
 /***** Info *****/
 /* Author: DJM */
-/* Function: 等待输入命令,并获取命令信息*/
+/* Function: 获取输入的命令,并决定调用*/
 int getInputCommand(){
 	/* Note: 注意命令输入的结束符号 */
-	int i;
-	int __switch = 1;
-	char * __content;
-	__content = (char *)malloc(MAX_CMD_LEN);
-	char __exit[5] = "exit";
+	int i = 0, j = 0;		/* 用于for循环 */
+	int __switch = 1;		/* shell退出开关 */
+	char contentStr[100];		/* 存输入的数组 */
+	char commandCompose[10][MAX_CMD_LEN / 2];	/* 分割后的命令组成多字符串数组 */
+	char strtmp[MAX_CMD_LEN / 2];
 
-	scanf("%s", __content);
-	if(strcmp(__content, __exit)){
-		printf("command \'%s\' no exist\n", __content);
+	strcpy(contentStr, " ");	/* init */
+	for(i = 0; i < 10; i++){
+		strcpy(commandCompose[i], " ");
 	}
-	if(!strcmp(__content, __exit)){
-		__switch = 0;
+
+	fgets(contentStr, 100, stdin);	/* input command */
+
+	i = 0;			/* split str of command,result save in commandCompose */
+	strcpy(strtmp, "");
+	for(j = 0; j < strlen(contentStr); j++){
+		if(contentStr[j] == ' ' && strlen(strtmp) == 0){
+			continue;
+		} else if (contentStr[j] == ' ' && strlen(strtmp) != 0){
+			strcpy(commandCompose[i], strtmp);
+			i++;
+			strcpy(strtmp, "");
+		}
+		else if(contentStr[j] != ' '){
+			sprintf(strtmp, "%s%c", strtmp, contentStr[j]);
+			if((j + 2) == strlen(contentStr)){	//命令串即将结束
+				strcpy(commandCompose[i], strtmp);
+			}
+		}
 	}
 	
-	free(__content);
+	/* 判断命令调用 */
+	if(!strcmp(commandCompose[0], "ls")){			/* 目录操作命令 */
+		printf("ls command is done\n");
+	} else if (!strcmp(commandCompose[0], "cd")){
+		printf("cd command is done\n");
+	} else if (!strcmp(commandCompose[0], "cat")){		/* 文件操作命令 */
+		printf("cat command is done\n");
+	} else if (!strcmp(commandCompose[0], "echo")){
+		printf("echo command is done\n");
+	} else if (!strcmp(commandCompose[0], "rename")){
+		printf("rename command is done\n");
+	} else if (!strcmp(commandCompose[0], "history")){	/* 其他命令 */
+		printf("history command is done\n");
+	} else if (!strcmp(commandCompose[0], "alias")){
+		printf("alias command is done\n");
+	} else if (!strcmp(commandCompose[0], "unalias")){
+		printf("unalias command is done\n");
+	} else if (!strcmp(commandCompose[0], "clear")){
+		printf("clear command is done\n");
+	} else if (!strcmp(commandCompose[0], "exit")){		/* 系统操作 */
+		__switch = 0;
+	} else if (!strcmp(commandCompose[0], "sleep")){
+		printf("sleep command is done\n");
+	} else if (!strcmp(commandCompose[0], "shutdown")){
+		printf("shutdown command is done\n");
+	} else if (!strcmp(commandCompose[0], "reboot")){
+		printf("reboot command is done\n");
+	} else {
+		printf("command \'%s\' no exist\n", commandCompose[0]);
+	}
+
 	return __switch;
 }
 
@@ -119,14 +167,22 @@ void shell(){
 	sayHello();
 	while(running_switch){
 		printPrefix();
-		running_switch = getInputCommand();
+		running_switch = getInputCommand();		//根据输入的命令执行相应的动作
 	}
 }
 
 int main(){
     /* 测试区 */
-    //getprompt_wq();
-    //printf("this is %s\n",store_promptGet("username"));
+    /*
+    store_commandInit();
+    store_commandPut("ls");
+    store_commandPut("cd");
+    store_commandPut("as");
+    store_commandPut("vi");
+    printf("the last cmd is %s\n", store_commandGet(1));
+    printf("the last cmd is %s\n", store_commandGet(2));
+    store_commandPrintAll();
+    */
     //return 0;
     /* 测试区 */
 

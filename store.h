@@ -8,9 +8,16 @@ extern void store_promptiInit();                      //段前缀初始化
 extern char * store_promptGet(char * index);          //获取段前缀
 extern void store_promptPut(int id, char * data);     //更改段前缀
 extern void store_promptiPrintAll();                  //打印所有前缀信息
+
+/* Author: DJM*/
+/* Funciton: 对历史命令的存储区的操作*/
+extern void store_commandInit();                       //历史命令区初始化
+extern char * store_commandGet(int i);                 //获取最近命令
+extern void store_commandPut(char * data);             //更新最近命令
+extern void store_commandPrintAll();                   //打印历史命令信息
+
 #include "store.c"
 
-#endif // STORE_H_INCLUDED
 
 /* ********
 *
@@ -39,5 +46,9 @@ extern void store_promptiPrintAll();                  //打印所有前缀信息
 *
 ******** */
 
+
+
+
+#endif // STORE_H_INCLUDED
 
 
