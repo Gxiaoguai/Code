@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 //#include <time.h>
 #include <dirent.h>
+#include <fcntl.h>
+#include <errno.h>
 //#include <grp.h>
 //#include <libgen.h>
 //#include "DbLinkList.h"
@@ -26,6 +28,7 @@
 #define MAX_NAME_LEN 100 
 #define MAX_CMD_LEN 100
 #define MAX_PATH_LEN 100
+#define MODE_RW_UGO (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
 /****** 全局量 ******/
 char commandCompose[10][MAX_CMD_LEN / 2];	/* 分割后的命令组成多字符串数组 */
@@ -37,6 +40,8 @@ void pipe_zhj();		//管道通信
 void getprompt_wq();	//获取用户信息
 void cd_wq();			//cd 命令
 void ls_djm();			//ls 命令
+void touch_djm();		//touch 命令
+void gedit_djm();		//gedit 命令
 void commandStrSplit(char contentStr[]);	//对命令字符串分割
 void commandStrLinkAndSplit();				//对commandCompose[]连接重分割
 int commandJudgeControl();					//对命令判断应调用什么函数完成
@@ -175,6 +180,31 @@ void ls_djm(){
 
 /***** Info *****/
 /* Author: DJM */
+/* Function: touch功能 */
+void touch_djm(char filename[]){
+	int fd = -1;
+	fd = open(filename, O_WRONLY|O_CREAT,MODE_RW_UGO);
+	//write(fd, s, sizeof(s));
+	if(fd == -1)
+		printf("create file error\n");
+	close(fd);
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: gedit功能 */
+void gedit_djm(char filename[]){
+	if(fork() == 0){
+		if(execlp("gedit", "gedit", filename, NULL) == -1){
+			perror("execl \'gedit\' error\n");
+			exit(1);
+		}
+	}
+	sleep(1);
+}
+
+/***** Info *****/
+/* Author: DJM */
 /* Function: 对命令字符串进行分割放入commandCompose */
 void commandStrSplit(char contentStr[]){
 	/* Note: split str of command,result save in commandCompose */
@@ -220,12 +250,15 @@ int commandJudgeControl(){
 	char cmd[MAX_CMD_LEN];
 	strcpy(cmd ,commandCompose[0]);
 	/* 判断命令调用 */
-	if(!strcmp(cmd, "ls")){			/* 目录操作命令 */
+	if(!strcmp(cmd, "ls")){					/* 目录操作命令 */
 		ls_djm();
 	} else if (!strcmp(cmd, "cd")){
 		cd_wq();
-		//printf("cd command is done\n");
-	} else if (!strcmp(cmd, "cat")){		/* 文件操作命令 */
+	} else if (!strcmp(cmd, "touch")){		/* 文件操作命令 */
+		touch_djm(commandCompose[1]);
+	} else if (!strcmp(cmd, "gedit")){
+		gedit_djm("test.c");
+	} else if (!strcmp(cmd, "cat")){
 		printf("cat command is done\n");
 	} else if (!strcmp(cmd, "echo")){
 		printf("echo command is done\n");
