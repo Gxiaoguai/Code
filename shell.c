@@ -27,10 +27,11 @@ char commandCompose[10][MAX_CMD_LEN / 2];	/* 分割后的命令组成多字符�
 
 /****** 函数声明 ******/
 void sayHello();        //进入提示
-void printPrefix();     //打印段前缀
-int getInputCommand();  //获取输入命令
-void pipe_zhj();	//管道通信
+void printPrefix();     //打印段前缀 依赖getprompt_wq()
+void pipe_zhj();		//管道通信
 void getprompt_wq();	//获取用户信息
+void cd_wq();			//cd 命令
+int getInputCommand();  //获取输入命令
 void shell();           //shell的总入口
 
 /****** 函数实现 ******/
@@ -75,6 +76,63 @@ void printPrefix(){
 void pipe_zhj(){}
 
 /***** Info *****/
+/* Author: WQ */
+/* Function: 从OS获知部分前缀信息并放入存储区 */
+void getprompt_wq(){
+    /* Note: 获取用户名，主机，当前目录，超级用户确认*/
+
+    /* 获取用户名 */
+	struct passwd *my_info;
+	int uid = getuid();         //返回用户id
+	my_info = getpwuid(uid);    //通过用户的uid查找用户的passwd数据
+	store_promptPut(1, my_info->pw_name);
+
+    /* 获取主机名 */
+	char hostname[MAX_NAME_LEN];
+	gethostname(hostname, sizeof(hostname));
+	store_promptPut(2, hostname);
+	
+	/* 获取当前目录 */
+	char pathname[MAX_PATH_LEN];
+	getcwd(pathname, MAX_PATH_LEN);
+	if (strncmp(pathname, my_info->pw_dir, strlen(my_info->pw_dir)) == 0){//比较两条路径
+		sprintf(pathname, "%s%s", "~", &pathname[strlen(my_info->pw_dir)]);
+		store_promptPut(3, pathname);
+	} else{
+		store_promptPut(3, pathname);
+	}
+	
+    /* 确认是否为超级用户 */
+	if (uid == 0) {
+		store_promptPut(4, "#");
+	}
+	else {
+		store_promptPut(4, "$");
+	}
+}
+
+/***** Info *****/
+/* Author: WQ */
+/* Function: cd功能 */
+void cd_wq(){
+	/* Note:放在能调用存储命令数组commandCompose[]同一文件里*/
+	struct passwd *pwd;
+	char pathname[MAX_PATH_LEN];			//储存路径名
+	pwd = getpwuid(getuid());				//获取用户信息 
+	if(strcmp(commandCompose[1]," ") == 0){	//如果第二个字符串为空，则代表进入根目录 
+		strcpy(pathname, pwd->pw_dir);		//获取pathname   pwd->pw_dir获取的目录都是/root 
+		if(chdir(pathname) == -1){			//如果有错
+			perror("myshell: chdir");		//报错
+			exit(1);
+		}
+	} else {								//如果有路径
+		if(chdir(commandCompose[1]) == -1){	//如果chdir执行失败
+			printf("TUBshell: cd: %s :No such file or directory\n", commandCompose[1]);	
+		}	
+	}
+}
+
+/***** Info *****/
 /* Author: DJM */
 /* Function: 获取输入的命令,并决定调用*/
 int getInputCommand(){
@@ -113,7 +171,8 @@ int getInputCommand(){
 	if(!strcmp(commandCompose[0], "ls")){			/* 目录操作命令 */
 		printf("ls command is done\n");
 	} else if (!strcmp(commandCompose[0], "cd")){
-		printf("cd command is done\n");
+		cd_wq();
+		//printf("cd command is done\n");
 	} else if (!strcmp(commandCompose[0], "cat")){		/* 文件操作命令 */
 		printf("cat command is done\n");
 	} else if (!strcmp(commandCompose[0], "echo")){
@@ -141,42 +200,6 @@ int getInputCommand(){
 	}
 
 	return __switch;
-}
-
-/***** Info *****/
-/* Author: WQ */
-/* Function: 从OS获知部分前缀信息并放入存储区 */
-void getprompt_wq(){
-    /* Note: 获取用户名，主机，当前目录，超级用户确认*/
-
-    /* 获取用户名 */
-	struct passwd *my_info;
-	int uid = getuid();         //返回用户id
-	my_info = getpwuid(uid);    //通过用户的uid查找用户的passwd数据
-	store_promptPut(1, my_info->pw_name);
-
-    /* 获取主机名 */
-	char hostname[MAX_NAME_LEN];
-	gethostname(hostname, sizeof(hostname));
-	store_promptPut(2, hostname);
-	
-	/* 获取当前目录 */
-	char pathname[MAX_PATH_LEN];
-	getcwd(pathname, MAX_PATH_LEN);
-	if (strncmp(pathname, my_info->pw_dir, strlen(my_info->pw_dir)) == 0){//比较两条路径
-		sprintf(pathname, "%s%s", "~", &pathname[strlen(my_info->pw_dir)]);
-		store_promptPut(3, pathname);
-	} else{
-		store_promptPut(3, pathname);
-	}
-	
-    /* 确认是否为超级用户 */
-	if (uid == 0) {
-		store_promptPut(4, "#");
-	}
-	else {
-		store_promptPut(4, "$");
-	}
 }
 
 /***** Info *****/
