@@ -15,7 +15,7 @@
 #include <malloc.h>
 #include <sys/stat.h>
 //#include <time.h>
-//#include <dirent.h>
+#include <dirent.h>
 //#include <grp.h>
 //#include <libgen.h>
 //#include "DbLinkList.h"
@@ -38,6 +38,8 @@ void getprompt_wq();	//获取用户信息
 void cd_wq();			//cd 命令
 void ls_djm();			//ls 命令
 void commandStrSplit(char contentStr[]);	//对命令字符串分割
+void commandStrLinkAndSplit();				//对commandCompose[]连接重分割
+int commandJudgeControl();					//对命令判断应调用什么函数完成
 int getInputCommand();  //获取输入命令
 void shell();           //shell的总入口
 
@@ -143,13 +145,32 @@ void cd_wq(){
 /* Author: DJM */
 /* Function: ls功能 */
 void ls_djm(){
-	/*
-	struct stat TUBstat;
+	//权限 硬链接数 拥有者 所属组 文件大小 创建时间 文件名
+	/* struct stat TUBstat;
 	if(lstat(filename, &TUBstat) == -1){
 		printf("lstat error");
 		exit(1);
 	}
-	char permission[15];*/
+	char permission[15] = {" "};
+	char type;
+	type = judgeFileType(&TUBstat);	
+	char *bname = basename(filename); */
+	
+	DIR * dir;	/* struct pointer */
+	struct dirent * rent;
+	char strtmp[100] = {" "};
+	int i = 0;
+	dir = opendir(".");	/* 打开当前目录 */
+	while((rent = readdir(dir))){
+		strcpy(strtmp, rent->d_name);
+		if(strtmp[0] == '.' || strtmp[0] == ' ')
+			continue;
+		printf("%s  ", strtmp);
+		//if(!((++i) % 6))
+			//printf("\n");
+	}
+	printf("\n");
+	closedir(dir);
 }
 
 /***** Info *****/
@@ -179,55 +200,80 @@ void commandStrSplit(char contentStr[]){
 
 /***** Info *****/
 /* Author: DJM */
+/* Function: 对commandCompose[]进行连接重新分割 */
+void commandStrLinkAndSplit(){
+	int i = 0;
+	char strtmp[MAX_CMD_LEN] = {""};
+	while(strcmp(commandCompose[i], " ")){
+		strcat(strtmp, commandCompose[i]);
+		strcat(strtmp, " ");
+		i++;
+	}
+	commandStrSplit(strtmp);
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 命令控制器(判断命令调用) */
+int commandJudgeControl(){
+	int __switch = 1;		/* shell退出开关 */
+	char cmd[MAX_CMD_LEN];
+	strcpy(cmd ,commandCompose[0]);
+	/* 判断命令调用 */
+	if(!strcmp(cmd, "ls")){			/* 目录操作命令 */
+		ls_djm();
+	} else if (!strcmp(cmd, "cd")){
+		cd_wq();
+		//printf("cd command is done\n");
+	} else if (!strcmp(cmd, "cat")){		/* 文件操作命令 */
+		printf("cat command is done\n");
+	} else if (!strcmp(cmd, "echo")){
+		printf("echo command is done\n");
+	} else if (!strcmp(cmd, "rename")){
+		printf("rename command is done\n");
+	} else if (!strcmp(cmd, "history")){	/* 其他命令 */
+		printf("history command is done\n");
+	} else if (!strcmp(cmd, "alias")){
+		printf("alias command is done\n");
+	} else if (!strcmp(cmd, "unalias")){
+		printf("unalias command is done\n");
+	} else if (!strcmp(cmd, "clear")){
+		printf("clear command is done\n");
+	} else if (!strcmp(cmd, "exit")){		/* 系统操作 */
+		__switch = 0;
+	} else if (!strcmp(cmd, "sleep")){
+		printf("sleep command is done\n");
+	} else if (!strcmp(cmd, "shutdown")){
+		printf("shutdown command is done\n");
+	} else if (!strcmp(cmd, "reboot")){
+		printf("reboot command is done\n");
+	} else {
+		printf("command \'%s\' no exist\n", cmd);
+	}
+	return __switch;
+}
+
+/***** Info *****/
+/* Author: DJM */
 /* Function: 获取输入的命令,并决定调用*/
 int getInputCommand(){
 	/* Note: 注意命令输入的结束符号 */
 	int i = 0, j = 0;		/* 用于for循环 */
 	int __switch = 1;		/* shell退出开关 */
 	char contentStr[100];		/* 存输入的数组 */
-
 	strcpy(contentStr, " ");	/* init */
 	for(i = 0; i < 10; i++){
 		strcpy(commandCompose[i], " ");
 	}
-
 	fgets(contentStr, 100, stdin);	/* input command */
 
-	/* 命令字符分割 */
+	/* 命令字符分割 重命名 链接重分割 */
 	commandStrSplit(contentStr);
+	//alias();
+	commandStrLinkAndSplit();
 	
 	/* 判断命令调用 */
-	if(!strcmp(commandCompose[0], "ls")){			/* 目录操作命令 */
-		printf("ls command is done\n");
-	} else if (!strcmp(commandCompose[0], "cd")){
-		cd_wq();
-		//printf("cd command is done\n");
-	} else if (!strcmp(commandCompose[0], "cat")){		/* 文件操作命令 */
-		printf("cat command is done\n");
-	} else if (!strcmp(commandCompose[0], "echo")){
-		printf("echo command is done\n");
-	} else if (!strcmp(commandCompose[0], "rename")){
-		printf("rename command is done\n");
-	} else if (!strcmp(commandCompose[0], "history")){	/* 其他命令 */
-		printf("history command is done\n");
-	} else if (!strcmp(commandCompose[0], "alias")){
-		printf("alias command is done\n");
-	} else if (!strcmp(commandCompose[0], "unalias")){
-		printf("unalias command is done\n");
-	} else if (!strcmp(commandCompose[0], "clear")){
-		printf("clear command is done\n");
-	} else if (!strcmp(commandCompose[0], "exit")){		/* 系统操作 */
-		__switch = 0;
-	} else if (!strcmp(commandCompose[0], "sleep")){
-		printf("sleep command is done\n");
-	} else if (!strcmp(commandCompose[0], "shutdown")){
-		printf("shutdown command is done\n");
-	} else if (!strcmp(commandCompose[0], "reboot")){
-		printf("reboot command is done\n");
-	} else {
-		printf("command \'%s\' no exist\n", commandCompose[0]);
-	}
-
+	__switch = commandJudgeControl();
 	return __switch;
 }
 
