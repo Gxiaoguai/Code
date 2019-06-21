@@ -114,7 +114,7 @@ void getprompt_wq(){
 /***** Info *****/
 /* Author: WQ */
 /* Function: cd功能 */
-void cd_wq(){
+int cd_wq(){
 	/* Note:放在能调用存储命令数组commandCompose[]同一文件里*/
 	struct passwd *pwd;
 	char pathname[MAX_PATH_LEN];			//储存路径名
