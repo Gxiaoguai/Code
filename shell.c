@@ -13,6 +13,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <malloc.h>
+#include <sys/stat.h>
+//#include <time.h>
+//#include <dirent.h>
+//#include <grp.h>
+//#include <libgen.h>
 //#include "DbLinkList.h"
 
 /****** 自定义模块 ******/
@@ -30,7 +35,9 @@ void sayHello();        //进入提示
 void printPrefix();     //打印段前缀 依赖getprompt_wq()
 void pipe_zhj();		//管道通信
 void getprompt_wq();	//获取用户信息
-int cd_wq();			//cd 命令
+void cd_wq();			//cd 命令
+void ls_djm();			//ls 命令
+void commandStrSplit(char contentStr[]);	//对命令字符串分割
 int getInputCommand();  //获取输入命令
 void shell();           //shell的总入口
 
@@ -114,7 +121,7 @@ void getprompt_wq(){
 /***** Info *****/
 /* Author: WQ */
 /* Function: cd功能 */
-int cd_wq(){
+void cd_wq(){
 	/* Note:放在能调用存储命令数组commandCompose[]同一文件里*/
 	struct passwd *pwd;
 	char pathname[MAX_PATH_LEN];			//储存路径名
@@ -134,22 +141,24 @@ int cd_wq(){
 
 /***** Info *****/
 /* Author: DJM */
-/* Function: 获取输入的命令,并决定调用*/
-int getInputCommand(){
-	/* Note: 注意命令输入的结束符号 */
-	int i = 0, j = 0;		/* 用于for循环 */
-	int __switch = 1;		/* shell退出开关 */
-	char contentStr[100];		/* 存输入的数组 */
-	char strtmp[MAX_CMD_LEN / 2];
-
-	strcpy(contentStr, " ");	/* init */
-	for(i = 0; i < 10; i++){
-		strcpy(commandCompose[i], " ");
+/* Function: ls功能 */
+void ls_djm(){
+	/*
+	struct stat TUBstat;
+	if(lstat(filename, &TUBstat) == -1){
+		printf("lstat error");
+		exit(1);
 	}
+	char permission[15];*/
+}
 
-	fgets(contentStr, 100, stdin);	/* input command */
-
-	i = 0;			/* split str of command,result save in commandCompose */
+/***** Info *****/
+/* Author: DJM */
+/* Function: 对命令字符串进行分割放入commandCompose */
+void commandStrSplit(char contentStr[]){
+	/* Note: split str of command,result save in commandCompose */
+	int i = 0, j = 0;			
+	char strtmp[MAX_CMD_LEN / 2];
 	strcpy(strtmp, "");
 	for(j = 0; j < strlen(contentStr); j++){
 		if(contentStr[j] == ' ' && strlen(strtmp) == 0){
@@ -166,6 +175,26 @@ int getInputCommand(){
 			}
 		}
 	}
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 获取输入的命令,并决定调用*/
+int getInputCommand(){
+	/* Note: 注意命令输入的结束符号 */
+	int i = 0, j = 0;		/* 用于for循环 */
+	int __switch = 1;		/* shell退出开关 */
+	char contentStr[100];		/* 存输入的数组 */
+
+	strcpy(contentStr, " ");	/* init */
+	for(i = 0; i < 10; i++){
+		strcpy(commandCompose[i], " ");
+	}
+
+	fgets(contentStr, 100, stdin);	/* input command */
+
+	/* 命令字符分割 */
+	commandStrSplit(contentStr);
 	
 	/* 判断命令调用 */
 	if(!strcmp(commandCompose[0], "ls")){			/* 目录操作命令 */
