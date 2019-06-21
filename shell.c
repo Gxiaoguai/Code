@@ -30,7 +30,7 @@ void sayHello();        //进入提示
 void printPrefix();     //打印段前缀 依赖getprompt_wq()
 void pipe_zhj();		//管道通信
 void getprompt_wq();	//获取用户信息
-void cd_wq();			//cd 命令
+int cd_wq();			//cd 命令
 int getInputCommand();  //获取输入命令
 void shell();           //shell的总入口
 
