@@ -1,4 +1,4 @@
-/*********************
+﻿/*********************
 *Project: TUBShell
 *Description: a private shell for OS command by C
 *Author: DJM ZHJ WQ
@@ -313,7 +313,7 @@ int commandJudge(){
 /* Author: DJM */
 /* Function: 命令控制器 */
 int commandControl(int __switch){
-	/* Note: __switch 为 0/1/2/3 分别代表 常规/管道/重定向/后台控制 命令 */
+	/* Note: __switch 为 0/1/2/3 分别代表 常规/管道/重定向/后台控制  命令 */
 	char cmd[MAX_CMD_LEN];
 	strcpy(cmd ,commandCompose[0]);
 	
