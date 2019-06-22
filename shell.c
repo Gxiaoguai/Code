@@ -31,7 +31,14 @@
 #define MODE_RW_UGO (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
 /****** 全局量 ******/
-char commandCompose[10][MAX_CMD_LEN / 2];	/* 分割后的命令组成多字符串数组 */
+char *commandCompose[MAX_CMD_LEN] = {""};	/* 分割后的命令组成多字符串数组 */
+
+/*char *commandCompose;
+commandCompose[0] = (char *)malloc(sizeof(char) * MAX_CMD_LEN * 25);
+int p;
+for(p = 1; p < M; p ++){
+    a[p] = a[p - 1] + n;
+}*/
 
 /****** 函数声明 ******/
 void sayHello();        //进入提示
@@ -44,7 +51,9 @@ void touch_djm();		//touch 命令
 void gedit_djm();		//gedit 命令
 void commandStrSplit(char contentStr[]);	//对命令字符串分割
 void commandStrLinkAndSplit();				//对commandCompose[]连接重分割
-int commandJudgeControl();					//对命令判断应调用什么函数完成
+int commandJudge();						//对命令判断是否为特殊cmd(& | < >)
+int commandControl();						//对命令判断应调用什么函数完成
+char *alias(char commanddStr[]);			//别名替换
 int getInputCommand();  //获取输入命令
 void shell();           //shell的总入口
 
@@ -206,29 +215,54 @@ void gedit_djm(char filename[]){
 /***** Info *****/
 /* Author: DJM */
 /* Function: 对命令字符串进行分割放入commandCompose */
-void commandStrSplit(char contentStr[]){
+void commandStrSplit(char * contentStr){
 	/* Note: split str of command,result save in commandCompose */
-	int i = 0, j = 0;			
-	char strtmp[MAX_CMD_LEN / 2];
-	strcpy(strtmp, "");
+	int i = 0, j = 0;
+	int k = 0, m = 0;
+	char strtmp[25][25] = {""};
+	int len = 0;	/* contentStr紧凑串(没有空格)的长度 */
+	
 	for(j = 0; j < strlen(contentStr); j++){
-		if(contentStr[j] == ' ' && strlen(strtmp) == 0){
+		if(contentStr[j] == ' ' && strlen(strtmp[k]) == 0){
 			continue;
-		} else if (contentStr[j] == ' ' && strlen(strtmp) != 0){
-			strcpy(commandCompose[i], strtmp);
-			i++;
-			strcpy(strtmp, "");
-		}
-		else if(contentStr[j] != ' '){
-			sprintf(strtmp, "%s%c", strtmp, contentStr[j]);
-			if((j + 2) == strlen(contentStr)){	//命令串即将结束
-				strcpy(commandCompose[i], strtmp);
+		} else if (contentStr[j] == ' ' && strlen(strtmp[k]) != 0){
+			commandCompose[i++] = strtmp[k++];
+		} else if(contentStr[j] == '|' || contentStr[j] == '>' || contentStr[j] == '<'){
+			if(strlen(strtmp[k]) != 0){
+				commandCompose[i++] = strtmp[k++];
+			}
+			strtmp[k][0] = contentStr[j];
+			commandCompose[i++] = strtmp[k++];
+		} else if(contentStr[j] != ' '){
+			for(m = 0; strtmp[k][m]; m++){}
+			strtmp[k][m] = contentStr[j];
+			
+			if((j + 2) >= strlen(contentStr)){
+				commandCompose[i++] = strtmp[k++];
+				break;
 			}
 		}
+		
+		if(contentStr[j] != ' ' || contentStr[j] != '\n')
+			len++;
 	}
+	commandCompose[i] = NULL;
+	
+	/* 打印测试 */
+	/*
+	printf("contentStr len is %ld\n",strlen(contentStr));
+	printf("total len is %d\n",len);
+	int sum = 0;
+	for(i = 0; sum < len; i++){
+		printf("第%d个分割 *%s*\n", i, commandCompose[i]);
+		printf("len *%ld*\n", strlen(commandCompose[i]));
+		sum += strlen(commandCompose[i]);
+	}
+	*/
 }
 
 /***** Info *****/
+/* 弃用 */
 /* Author: DJM */
 /* Function: 对commandCompose[]进行连接重新分割 */
 void commandStrLinkAndSplit(){
@@ -244,46 +278,78 @@ void commandStrLinkAndSplit(){
 
 /***** Info *****/
 /* Author: DJM */
-/* Function: 命令控制器(判断命令调用) */
-int commandJudgeControl(){
-	int __switch = 1;		/* shell退出开关 */
-	char cmd[MAX_CMD_LEN];
-	strcpy(cmd ,commandCompose[0]);
-	/* 判断命令调用 */
-	if(!strcmp(cmd, "ls")){					/* 目录操作命令 */
-		ls_djm();
-	} else if (!strcmp(cmd, "cd")){
-		cd_wq();
-	} else if (!strcmp(cmd, "touch")){		/* 文件操作命令 */
-		touch_djm(commandCompose[1]);
-	} else if (!strcmp(cmd, "gedit")){
-		gedit_djm("test.c");
-	} else if (!strcmp(cmd, "cat")){
-		printf("cat command is done\n");
-	} else if (!strcmp(cmd, "echo")){
-		printf("echo command is done\n");
-	} else if (!strcmp(cmd, "rename")){
-		printf("rename command is done\n");
-	} else if (!strcmp(cmd, "history")){	/* 其他命令 */
-		printf("history command is done\n");
-	} else if (!strcmp(cmd, "alias")){
-		printf("alias command is done\n");
-	} else if (!strcmp(cmd, "unalias")){
-		printf("unalias command is done\n");
-	} else if (!strcmp(cmd, "clear")){
-		printf("clear command is done\n");
-	} else if (!strcmp(cmd, "exit")){		/* 系统操作 */
-		__switch = 0;
-	} else if (!strcmp(cmd, "sleep")){
-		printf("sleep command is done\n");
-	} else if (!strcmp(cmd, "shutdown")){
-		printf("shutdown command is done\n");
-	} else if (!strcmp(cmd, "reboot")){
-		printf("reboot command is done\n");
-	} else {
-		printf("command \'%s\' no exist\n", cmd);
+/* Function: 命令判断(特殊,普通) */
+int commandJudge(){
+	/* Note: & < > | */
+	/* 普通命令返回 0 */
+	/* 上述特殊命令分别返回 1(|) 2(< >) 3(&)*/
+	int __switch = 0;
+	int i, j;
+	for(i = 0; commandCompose[i]; i++){
+		for(j = 0; commandCompose[i][j]; j++){
+			switch(commandCompose[i][j]){
+				case '|': __switch = 1; break;
+				case '<': ;
+				case '>': __switch = 2; break;
+				case '&': __switch = 3; break;
+				default: __switch = 0;
+			}
+			if(__switch != 0){
+				//printf("special cmd\n");
+				break;
+			}
+		}
+		if(__switch != 0){
+			break;
+		}
+	}
+	if(__switch == 0){
+		//printf("common command\n");
 	}
 	return __switch;
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 命令控制器 */
+int commandControl(int __switch){
+	/* Note: __switch 为 0/1/2/3 分别代表 常规/管道/重定向/后台控制 命令 */
+	char cmd[MAX_CMD_LEN];
+	strcpy(cmd ,commandCompose[0]);
+	
+	/* 判断命令调用 */
+	switch(__switch){
+		case 0:
+			if(fork() == 0){
+				//if((execlp("ls", "ls", NULL)) == -1){
+				if((execvp(cmd, commandCompose)) == -1){
+					perror("execvp error\n");
+					exit(1);
+				}
+			}
+			sleep(1);
+			break;
+		case 1: ;
+		case 2: ;
+		case 3: 
+			printf("command %s is done\n", cmd);
+			break;
+		default: printf("command \'%s\' no exist\n", cmd);;
+	}
+	
+	return __switch;
+	
+	/* 保留日后用 */
+	/* ls_djm() cd_wq() touch_djm() gedit_djm() */
+	/* ls cd touch gedit */
+	/* cat echo rename history alias unalias clear exit sleep shutdown reboot  */
+}
+
+/***** Info *****/
+/* Author:  */
+/* Function: 别名替换 */
+char *alias(char commanddStr[]){
+	return commanddStr;
 }
 
 /***** Info *****/
@@ -291,23 +357,21 @@ int commandJudgeControl(){
 /* Function: 获取输入的命令,并决定调用*/
 int getInputCommand(){
 	/* Note: 注意命令输入的结束符号 */
-	int i = 0, j = 0;		/* 用于for循环 */
-	int __switch = 1;		/* shell退出开关 */
+	int i = 0, j = 0;			/* 用于for循环 */
+	int __switch = 1;			/* 判断控制调用开关 和 shell退出开关 */
 	char contentStr[100];		/* 存输入的数组 */
 	strcpy(contentStr, " ");	/* init */
-	for(i = 0; i < 10; i++){
-		strcpy(commandCompose[i], " ");
-	}
+
 	fgets(contentStr, 100, stdin);	/* input command */
 
-	/* 命令字符分割 重命名 链接重分割 */
-	commandStrSplit(contentStr);
-	//alias();
-	commandStrLinkAndSplit();
+	/* 命令字符串 ->重命名->分割->调用 */
+	char resultAlias[100];
+	strcpy(resultAlias, alias(contentStr));
+	commandStrSplit(resultAlias);		/* split result put in global array '*commandCompose[]' */
 	
-	/* 判断命令调用 */
-	__switch = commandJudgeControl();
-	return __switch;
+	__switch = commandJudge();
+	__switch = commandControl(__switch);	/* exec command */
+	return (__switch+1);
 }
 
 /***** Info *****/
