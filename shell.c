@@ -48,7 +48,7 @@ int cd_wq(char op_path[2][MAX_CMD_LEN/2]);	//cd 命令
 int ls_djm();								//ls 命令
 int touch_djm(char filename[]);				//touch 命令
 int gedit_djm(char filename[]);				//gedit 命令
-int commonCmd_execError_search();			//命令不能exec外部调用，去查找我们做的命令实现
+int commonCmd_beforeExec_search();			//exec外部调用之前，先查找我们做的命令实现
 int commonCmd_djm();						//常规命令
 int pipeCmd_zhj();							// | 管道命令
 int redirectCmd_djm();						//< > 重定向命令
@@ -144,27 +144,23 @@ int cd_wq(char op_path[2][MAX_CMD_LEN/2]){
 	char pathname[MAX_PATH_LEN];					//储存路径名
 	pwd = getpwuid(getuid());						//获取用户信息 
 	
-	//打印测试
-	printf("op is %s\n", op_path[0]);
-	printf("path is %s\n", op_path[1]);
-	
 	if(strcmp(op_path[1],"") == 0){					//如果第二个字符串为空，则代表进入根目录 
-		printf("if here \n");
-		strcpy(pathname, pwd->pw_dir);				//获取pathname   pwd->pw_dir获取的目录都是/root 
-		if((ret = chdir(pathname)) == -1){			//如果有错
+		strcpy(pathname, pwd->pw_dir);				//获取pathname   pwd->pw_dir获取的目录都是/root
+		if(ret=(chdir(pathname)) == -1){			//如果有错
+			ret = -1;
 			perror("TUBshell: chdir");				//报错
 			exit(1);
 		}
 	} else {										//如果有路径
-		printf("else here \n");
-		if((ret = chdir(op_path[1])) == -1){		//如果chdir执行失败
-			printf("TUBshell: cd: %s :No such file or directory\n", commandCompose[1]);	
+		if(ret=(chdir(op_path[1])) == -1){			//如果chdir执行失败
+			ret = -1;
+			printf("TUBshell: cd: %s :No such file or directory\n", commandCompose[1]);
+			exit(1);
 		}	
 	}
 	
-	if(!ret)	//ret = 0; chdir() success
+	if(!ret)			//ret = 0; chdir() success
 		ret = 1; 
-	printf("cd_wq ret is %d\n", ret);
 	return ret;
 }
 
@@ -172,17 +168,7 @@ int cd_wq(char op_path[2][MAX_CMD_LEN/2]){
 /* Author: DJM */
 /* Function: ls功能 */
 int ls_djm(){
-	//权限 硬链接数 拥有者 所属组 文件大小 创建时间 文件名
-	/* struct stat TUBstat;
-	if(lstat(filename, &TUBstat) == -1){
-		printf("lstat error");
-		exit(1);
-	}
-	char permission[15] = {" "};
-	char type;
-	type = judgeFileType(&TUBstat);	
-	char *bname = basename(filename); */
-	
+	//-l(未自实现) 权限 硬链接数 拥有者 所属组 文件大小 创建时间 文件名
 	DIR * dir;	/* struct pointer */
 	struct dirent * rent;
 	char strtmp[100] = {" "};
@@ -231,15 +217,22 @@ int gedit_djm(char filename[]){
 /***** Info *****/
 /* Author: DJM */
 /* Function: 查找我们做的命令实现 */
-int commonCmd_execError_search(){
-	/* Note: 命令不能exec外部调用时查找 */
+int commonCmd_beforeExec_search(){
+	/* Note: 在exec外部调用前查找，看有无我们自己实现的内建命令 */
 	int ret = -1;
 	char str_Op_Path[2][MAX_CMD_LEN / 2];
 	strcpy(str_Op_Path[0], commandCompose[0]);
 	strcpy(str_Op_Path[1], commandCompose[1]);
+	
 	ret = (strcmp(str_Op_Path[0], "cd")) ? ret : cd_wq(str_Op_Path);
-	ret = (strcmp(str_Op_Path[0], "touch")) ? ret : touch_djm("none");
-	ret = (strcmp(str_Op_Path[0], "gedit")) ? ret : gedit_djm("none");
+	//ret = (strcmp(str_Op_Path[0], "touch")) ? ret : touch_djm("none");
+	//ret = (strcmp(str_Op_Path[0], "gedit")) ? ret : gedit_djm("none");
+	//ret = (strcmp(str_Op_Path[0], "ls")) ? ret : gedit_djm("none");
+	
+	/* 保留日后用 */
+	/* ls_djm() cd_wq() touch_djm() gedit_djm() */
+	/* ls cd touch gedit */
+	/* cat echo rename history alias unalias clear exit sleep shutdown reboot  */
 	return ret;
 }
 
@@ -251,32 +244,17 @@ int commonCmd_djm(){
 	int funcRet = -1;		/* 用于函数内部获取调用函数返回值 1/-1 success/failure */
 	char cmd[MAX_CMD_LEN];
 	strcpy(cmd ,commandCompose[0]);
-	if(vfork() == 0){
-		if((__switch = execvp(cmd, commandCompose)) == -1){
-			//perror("execvp error\n");
-			/* 因为子进程中调用函数会出现数据乱码 */
-			/* 故对自己实现的命令只能在此进行控制调用 */
-			/* Note: 常规命令exec无法调用，查找程序中有无实现 */
-			
-			//printf("cd path is %s\n", commandCompose[0]);
-			//printf("cd path is %s\n", commandCompose[1]);
-			//printf("cd path is %s\n", commandCompose[2]);
-			/*
-			char str_Op[MAX_CMD_LEN/2];
-			char str_Path[MAX_CMD_LEN/2];
-			strcpy(str_Op, commandCompose[0]);
-			strcpy(str_Path, commandCompose[1]);
-			funcRet = (strcmp(cmd, "cd")) ? funcRet : cd_wq(str_Op, str_Path);
-			funcRet = (strcmp(cmd, "touch")) ? funcRet : touch_djm("none");
-			funcRet = (strcmp(cmd, "gedit")) ? funcRet : gedit_djm("none");
-			*/
-			funcRet = commonCmd_execError_search();
-			if(funcRet == 1){	//查询成功
-				__switch = 0;
-			} else {			//查询失败
+	
+	funcRet = commonCmd_beforeExec_search();
+	if(funcRet == 1){			//查询成功
+		//printf("cmd is exist in our program and done\n");
+	} else {					//查询失败
+		if(vfork() == 0){
+			if((__switch = execvp(cmd, commandCompose)) == -1){
+				//perror("execvp error\n");
 				printf("Command \'%s\' not found\n", cmd);
+				exit(1);
 			}
-			exit(1);
 		}
 	}
 	sleep(1);
@@ -440,11 +418,6 @@ int commandControl(int __switch){
 	}
 	
 	return __switch;
-	
-	/* 保留日后用 */
-	/* ls_djm() cd_wq() touch_djm() gedit_djm() */
-	/* ls cd touch gedit */
-	/* cat echo rename history alias unalias clear exit sleep shutdown reboot  */
 }
 
 /***** Info *****/
