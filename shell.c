@@ -148,13 +148,15 @@ int cd_wq(char op_path[2][MAX_CMD_LEN/2]){
 	printf("op is %s\n", op_path[0]);
 	printf("path is %s\n", op_path[1]);
 	
-	if(strcmp(op_path[0],"") == 0){			//如果第二个字符串为空，则代表进入根目录 
+	if(strcmp(op_path[1],"") == 0){					//如果第二个字符串为空，则代表进入根目录 
+		printf("if here \n");
 		strcpy(pathname, pwd->pw_dir);				//获取pathname   pwd->pw_dir获取的目录都是/root 
 		if((ret = chdir(pathname)) == -1){			//如果有错
 			perror("TUBshell: chdir");				//报错
 			exit(1);
 		}
 	} else {										//如果有路径
+		printf("else here \n");
 		if((ret = chdir(op_path[1])) == -1){		//如果chdir执行失败
 			printf("TUBshell: cd: %s :No such file or directory\n", commandCompose[1]);	
 		}	
