@@ -222,7 +222,9 @@ int commonCmd_beforeExec_search(){
 	int ret = -1;
 	char str_Op_Path[2][MAX_CMD_LEN / 2];
 	strcpy(str_Op_Path[0], commandCompose[0]);
-	strcpy(str_Op_Path[1], commandCompose[1]);
+	if(!strcmp(commandCompose[0], "cd")){
+		strcpy(str_Op_Path[1], commandCompose[1]);
+	}
 	
 	ret = (strcmp(str_Op_Path[0], "cd")) ? ret : cd_wq(str_Op_Path);
 	//ret = (strcmp(str_Op_Path[0], "touch")) ? ret : touch_djm("none");
@@ -244,12 +246,14 @@ int commonCmd_djm(){
 	int funcRet = -1;		/* 用于函数内部获取调用函数返回值 1/-1 success/failure */
 	char cmd[MAX_CMD_LEN];
 	strcpy(cmd ,commandCompose[0]);
-	
+
 	funcRet = commonCmd_beforeExec_search();
+	
 	if(funcRet == 1){			//查询成功
 		//printf("cmd is exist in our program and done\n");
 	} else {					//查询失败
-		if(vfork() == 0){
+		printf("serach failure ready to exec\n");
+		if(fork() == 0){
 			if((__switch = execvp(cmd, commandCompose)) == -1){
 				//perror("execvp error\n");
 				printf("Command \'%s\' not found\n", cmd);
@@ -438,7 +442,13 @@ int getInputCommand(){
 	strcpy(contentStr, " ");	/* init */
 
 	fgets(contentStr, 100, stdin);	/* input command */
-
+	
+	/* 判断是否为空回车 fgets()默认带'\0' */
+	if(strlen(contentStr) == 1){
+		//printf("this is enter\n");
+		return 1;
+	}
+	
 	/* 命令字符串 ->重命名->分割->调用 */
 	char resultAlias[100];
 	strcpy(resultAlias, alias(contentStr));
