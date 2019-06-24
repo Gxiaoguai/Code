@@ -33,13 +33,6 @@
 /****** 全局量 ******/
 char *commandCompose[MAX_CMD_LEN] = {""};	/* 分割后的命令组成多字符串数组 */
 
-/*char *commandCompose;
-commandCompose[0] = (char *)malloc(sizeof(char) * MAX_CMD_LEN * 25);
-int p;
-for(p = 1; p < M; p ++){
-    a[p] = a[p - 1] + n;
-}*/
-
 /****** 函数声明 ******/
 void sayHello();        					//进入提示
 void printPrefix();     					//打印段前缀 依赖getprompt_wq()
@@ -57,9 +50,16 @@ void commandStrSplit(char contentStr[]);	//对命令字符串分割
 void commandStrLinkAndSplit();				//对commandCompose[]连接重分割
 int commandJudge();							//对命令判断是否为特殊cmd(& | < >)
 int commandControl();						//对命令判断应调用什么函数完成
-char *alias_zhj(char commanddStr[]);			//别名替换
 int getInputCommand();  					//获取输入命令
 void shell();           					//shell的总入口
+
+/****** 从store.c引入 ******/
+void aliasInsert_zhj();						//插入alias存储区
+void printAlia_zhj();						//打印alias结果
+char * checkAlias_zhj(char *findstr);		//检查alias存储区
+char * judgeAlias_zhj(char *p);				//判断有无别名（需要checkAlias_zhj()）
+int alias_zhj();							//alias命令
+int unalias_zhj();							//unalias命令
 
 /****** 函数实现 ******/
 /***** Info *****/
@@ -221,19 +221,23 @@ int commonCmd_beforeExec_search(){
 	/* Note: 在exec外部调用前查找，看有无我们自己实现的内建命令 */
 	int ret = -1;
 	char str_Op_Path[2][MAX_CMD_LEN / 2];
+	char cmd[MAX_CMD_LEN / 2];
+	strcpy(cmd, commandCompose[0]);
 	strcpy(str_Op_Path[0], commandCompose[0]);
 	if(!strcmp(commandCompose[0], "cd")){
-		if(commandCompose[1] = ""){
-			strcpy(str_Op_Path[1], commandCompose[1]);
+		if(commandCompose[1] == NULL){
+			//printf("cd folow is none\n");
 		} else {
-			printf("cd folow is none\n");
+			strcpy(str_Op_Path[1], commandCompose[1]);
 		}
 	} 
 	
-	ret = (strcmp(str_Op_Path[0], "cd")) ? ret : cd_wq(str_Op_Path);
-	//ret = (strcmp(str_Op_Path[0], "touch")) ? ret : touch_djm("none");
-	//ret = (strcmp(str_Op_Path[0], "gedit")) ? ret : gedit_djm("none");
-	//ret = (strcmp(str_Op_Path[0], "ls")) ? ret : gedit_djm("none");
+	ret = (strcmp(cmd, "cd")) ? ret : cd_wq(str_Op_Path);
+	ret = (strcmp(cmd, "alias")) ? ret : alias_zhj();
+	ret = (strcmp(cmd, "unalias")) ? ret : unalias_zhj();
+	//ret = (strcmp(cmd, "touch")) ? ret : touch_djm("none");
+	//ret = (strcmp(cmd, "gedit")) ? ret : gedit_djm("none");
+	//ret = (strcmp(cmd, "ls")) ? ret : gedit_djm("none");
 	
 	/* 保留日后用 */
 	/* ls_djm() cd_wq() touch_djm() gedit_djm() */
@@ -311,13 +315,21 @@ void commandStrSplit(char * contentStr){
 	int i = 0, j = 0;
 	int k = 0, m = 0;
 	char strtmp[25][25] = {""};
-	int len = 0;	/* contentStr紧凑串(没有空格)的长度 */
+	int switch_keepStr = 0;	/* 遇到左单引号，开开关(=1)，遇右单引号，关开关(=0) */	
+	int len = 0;			/* contentStr紧凑串(没有空格，换行)的长度 */
 	
 	for(j = 0; j < strlen(contentStr); j++){
 		if(contentStr[j] == ' ' && strlen(strtmp[k]) == 0){
 			continue;
 		} else if (contentStr[j] == ' ' && strlen(strtmp[k]) != 0){
-			commandCompose[i++] = strtmp[k++];
+			if(switch_keepStr == 0){
+				// no ' control
+				commandCompose[i++] = strtmp[k++];
+			} else {
+				// have ' control
+				for(m = 0; strtmp[k][m]; m++){}
+				strtmp[k][m] = contentStr[j];
+			}
 		} else if(contentStr[j]=='|'||contentStr[j]=='>'||contentStr[j]=='<'||contentStr[j]=='&'){
 			if(strlen(strtmp[k]) != 0){
 				commandCompose[i++] = strtmp[k++];
@@ -325,15 +337,24 @@ void commandStrSplit(char * contentStr){
 			strtmp[k][0] = contentStr[j];
 			commandCompose[i++] = strtmp[k++];
 		} else if(contentStr[j] != ' ' && contentStr[j] != '\n' ){
+			// set ' control
+			if(contentStr[j] == '\''){
+				if(switch_keepStr == 0){		//首次遇到'，开
+					switch_keepStr = 1;
+				} else {						//再次遇到'，关
+					switch_keepStr = 0;
+				}
+			}
+			
 			for(m = 0; strtmp[k][m]; m++){}
 			strtmp[k][m] = contentStr[j];
 			
-			if((j + 2) >= strlen(contentStr)){
+			if((j + 1) >= strlen(contentStr)){
 				commandCompose[i++] = strtmp[k++];
 				break;
 			}
 		}
-		if(contentStr[j] != ' ' || contentStr[j] != '\n' || contentStr[j] != '\0')
+		if(contentStr[j] != ' ' && contentStr[j] != '\n' && contentStr[j] != '\0')
 			len++;
 	}
 	commandCompose[i] = NULL;
@@ -430,19 +451,21 @@ int commandControl(int __switch){
 /***** Info *****/
 /* Author:  */
 /* Function: 别名替换 */
+/*
 char *alias_zhj(char commanddStr[]){
 	return commanddStr;
 }
+*/
 
 /***** Info *****/
 /* Author: DJM */
 /* Function: 获取输入的命令,并决定调用*/
 int getInputCommand(){
 	/* Note: 注意命令输入的结束符号 */
-	int i = 0, j = 0;			/* 用于for循环 */
-	int __switch = 1;			/* 判断控制调用开关 和 shell退出开关 */
-	char contentStr[100];		/* 存输入的数组 */
-	strcpy(contentStr, " ");	/* init */
+	int i = 0, j = 0;				/* 用于for循环 */
+	int __switch = 1;				/* 判断控制调用开关 和 shell退出开关 */
+	char contentStr[100];			/* 存输入的数组 */
+	strcpy(contentStr, " ");		/* init */
 
 	fgets(contentStr, 100, stdin);	/* input command */
 	
@@ -452,9 +475,30 @@ int getInputCommand(){
 		return 1;
 	}
 	
+	//printf("before contentStr is *%s*\n", contentStr);
+	
+	/* fgets()默认带'\n',将其替换为\0 */
+	while(contentStr[i] != '\n'){
+		i++;
+	}
+	contentStr[i] = '\0';
+	
+	//printf("after contentStr is *%s*\n", contentStr);
+	
+	//return 0;
+	
 	/* 命令字符串 ->重命名->分割->调用 */
-	char resultAlias[100];
-	strcpy(resultAlias, alias_zhj(contentStr));
+	char resultAlias[MAX_CMD_LEN];
+	
+	//测试通过
+	//commandCompose[0] = "alias";
+	//commandCompose[1] = "djm='ls -l'";
+	//aliasInsert_zhj();
+	//printAlia_zhj();
+	
+	strcpy(resultAlias, judgeAlias_zhj(contentStr));
+	//printf("alias result is *%s*\n", resultAlias);
+	
 	commandStrSplit(resultAlias);		/* split result put in global array '*commandCompose[]' */
 	
 	__switch = commandJudge();
@@ -494,6 +538,164 @@ int main(){
     shell();
     return 0;
 }
+
+/* **********:**********:**********: 共享的alias存储结构体及操作 **********:**********:**********: */
+struct Record
+{
+    char word[MAX_CMD_LEN];
+    char mean[MAX_CMD_LEN];
+};
+struct Node
+{
+    struct Record data;
+    struct Node *next;
+};
+static struct Node dictionary;
+static struct Node* head = &dictionary;
+static struct Node* currentRecord = &dictionary;
+
+/***** Info *****/
+/* Author: ZHJ */
+/* Function: alias存储结构体插入 */
+void aliasInsert_zhj(){
+	//准备做插入操作(带检测)
+    struct Node *temp = (struct Node*)malloc(sizeof(struct Node));
+    char str[MAX_CMD_LEN / 2];
+    strcpy(str, commandCompose[1]);
+	
+	//插入
+    char *tmp = "";
+    tmp = strtok(str, "=");
+    strcpy((temp->data).word, tmp);
+    
+    /* 检测重名 */
+	char checkResult[MAX_CMD_LEN] = "";
+	strcpy(checkResult, checkAlias_zhj(str));		//进别名 出命令
+	if(strcmp(checkResult, str) != 0){
+		//有重名
+		struct Node* p = head;
+    	p = p->next;
+		while(p != NULL){
+		    if(strcmp(str, (p->data).word) == 0){
+		        tmp = strtok(NULL, "'");
+		        strcpy((p->data).mean, tmp);
+		        break;
+		    }
+		    p = p->next;
+		}
+        return;
+    }
+    /* 检测完毕 */
+    
+    //无别名
+    tmp = strtok(NULL, "'");
+    strcpy((temp->data).mean, tmp);
+    
+    currentRecord->next = temp;
+    temp->next = NULL;
+    currentRecord = currentRecord->next;
+    return;
+}
+
+/***** Info *****/
+/* Author: ZHJ */
+/* Function: 打印alias存储结构体所有结果 */
+void printAlia_zhj(){
+	struct Node* p = head;
+	p = p->next;
+	while(p != NULL){
+		printf("alias: %s=\'%s\'\n", (p->data).word, (p->data).mean);
+		p = p->next;
+	}
+}
+
+/***** Info *****/
+/* Author: ZHJ */
+/* Function: 遍历alias存储结构体 */
+char * checkAlias_zhj(char *findstr){
+    struct Node* p = head;
+    p = p->next;
+    char exam[MAX_CMD_LEN / 2 + 1];
+    static char retStr[MAX_CMD_LEN] = "";
+    strcpy(retStr, findstr);
+    strcpy(exam, findstr);
+    
+    while(p != NULL){
+        if(strcmp(exam, (p->data).word) == 0){
+            strcpy(retStr, (p->data).mean);
+            break;
+        }
+        p = p->next;
+    }
+    return retStr;
+}
+
+/***** Info *****/
+/* Author: ZHJ */
+/* Function: 判断输入有无别名，有则替换 */
+char * judgeAlias_zhj(char *cmdStr){
+	/* Note: 判断输入的命令行中有无别名， */
+	/* 有则替换，没有则返回原串 */
+	/* 调用checkAlias_zhj()遍历alias存储结构体 */
+	static char resultStr[MAX_CMD_LEN];
+	strcpy(resultStr, "");
+	char *target;
+	char *tmp;
+	char checkResult[MAX_CMD_LEN] = "";
+
+	target = strtok_r(cmdStr, " ", &tmp);
+	strcpy(checkResult, checkAlias_zhj(target));		/* search and put in checkResult */
+    if(strlen(checkResult) != 0){
+        strcpy(resultStr, checkResult);
+	}
+	strcat(resultStr, " ");
+	strcat(resultStr, tmp);
+	return resultStr;
+}
+
+/***** Info *****/
+/* Author: ZHJ */
+/* Function: 实现alias命令 */
+int alias_zhj(){
+	if(commandCompose[1] == NULL){
+		printAlia_zhj();                	//print all the relations
+	} else {
+		aliasInsert_zhj(currentRecord);		//insert the relation
+	}
+	return 1;
+}
+
+/***** Info *****/
+/* Author: ZHJ */
+/* Function: 实现unalias命令 */
+int unalias_zhj(){
+    char checkResult[MAX_CMD_LEN] = "";
+    strcpy(checkResult, checkAlias_zhj(commandCompose[1]));
+
+    if(strcmp(checkResult, commandCompose[1]) == 0){
+        printf("[unalias] \'%s\':not found", commandCompose[1]);
+        return 1;
+    }
+
+	char deletestr[MAX_CMD_LEN / 2 + 1];
+	strcpy(deletestr, commandCompose[1]);
+    struct Node *p = head;
+    struct Node *tmp;
+    int i = 0;
+    while((p->next) != NULL){
+        if(strcmp(deletestr, ((p->next)->data).word) == 0){
+            tmp = p->next;
+            p->next = tmp->next;
+           	tmp->next = NULL;
+            free(tmp);
+            break;
+        }
+        p = p->next;
+        i++;
+    }
+    return 1;
+}
+
 
 
 
