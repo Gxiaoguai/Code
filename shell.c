@@ -287,7 +287,75 @@ int commonCmd_djm(){
 /***** Info *****/
 /* Author: ZHJ */
 /* Function: 实现管道命令 */
-int pipeCmd_zhj(){}
+int pipeCmd_zhj(){
+    /* Note：如下是测试用例 */
+	/* cmd中存放指令序列,cmd[0]为pipe前的指令，cmd为pipe后的指令 */
+	/* param1存放cmd[0]指令的参数 */
+	/* param2存放cmd[1]指令的参数 */
+
+	/* 测试用例 */
+	//printf("entering pipe!\n");
+	int __switch = 1;
+    char *cmd1[MAX_CMD_LEN];
+	char *cmd2[MAX_CMD_LEN];
+	int i = 0;
+	int j = 0;
+	/*initialize*/	
+
+	while(strcmp(commandCompose[i], "|") != 0){
+		cmd1[i] = (char *)malloc(MAX_CMD_LEN * sizeof(char));
+		strcpy(cmd1[i], commandCompose[i]);
+		i++;	
+	}
+	cmd1[i] = 0;
+	i++;
+	j = 0;
+	while(commandCompose[i] != NULL){
+		cmd2[j] = (char *)malloc(MAX_CMD_LEN * sizeof(char));
+		strcpy(cmd2[j], commandCompose[i]);
+		//param1[j]=commandCompose[i--];
+		i++;
+		j++;
+	}
+	cmd2[j] = 0;
+
+	//创建管道
+    int pid1;
+	int pid2;
+    int fd[2];//fd[0]读端，fd[1]写端
+    pipe(fd);
+	int flag;
+	
+	//创建子进程
+    if((pid1 = fork()) == 0){
+		//子进程1，默认为pipe前的指令ls
+		dup2(fd[1], 1);//把标准输出流重定向到管道写端
+		close(fd[0]);//关闭管道的文件描述符
+		close(fd[1]);
+		if((flag=execvp(cmd1[0], cmd1)) < 0){
+			printf("son:no such command %d", flag);
+    	}
+		exit(EXIT_SUCCESS);
+	} else {
+        //父进程，默认为pipe后的指令
+        //waitpid(pid1,NULL,0);
+		if(pid2=fork() == 0){
+			dup2(fd[0], 0);//把标准输入流重定向到管道读端
+            close(fd[0]);
+			close(fd[1]);
+
+            if((flag=execvp(cmd2[0], cmd2)) < 0){
+            	printf("father:no such command %d", flag);
+            }
+			exit(EXIT_SUCCESS);
+		} else {
+			//waitpid(pid1,NULL,0);
+			//waitpid(pid2,NULL,0);
+			sleep(1);
+			return __switch;
+		}
+	}
+}
 
 /***** Info *****/
 /* Author: DJM */
@@ -461,7 +529,7 @@ int commandControl(int __switch){
 			__switch = commonCmd_djm();
 			break;
 		case 1:
-			printf("command %s is done\n", cmd);
+			__switch = pipeCmd_zhj();
 			break;
 		case 2:
 			printf("command %s is done\n", cmd);
@@ -474,15 +542,6 @@ int commandControl(int __switch){
 	
 	return __switch;
 }
-
-/***** Info *****/
-/* Author:  */
-/* Function: 别名替换 */
-/*
-char *alias_zhj(char commanddStr[]){
-	return commanddStr;
-}
-*/
 
 /***** Info *****/
 /* Author: DJM */
