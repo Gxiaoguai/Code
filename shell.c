@@ -57,7 +57,7 @@ void commandStrSplit(char contentStr[]);	//对命令字符串分割
 void commandStrLinkAndSplit();				//对commandCompose[]连接重分割
 int commandJudge();							//对命令判断是否为特殊cmd(& | < >)
 int commandControl();						//对命令判断应调用什么函数完成
-char *alias(char commanddStr[]);			//别名替换
+char *alias_zhj(char commanddStr[]);			//别名替换
 int getInputCommand();  					//获取输入命令
 void shell();           					//shell的总入口
 
@@ -223,8 +223,12 @@ int commonCmd_beforeExec_search(){
 	char str_Op_Path[2][MAX_CMD_LEN / 2];
 	strcpy(str_Op_Path[0], commandCompose[0]);
 	if(!strcmp(commandCompose[0], "cd")){
-		strcpy(str_Op_Path[1], commandCompose[1]);
-	}
+		if(commandCompose[1] = ""){
+			strcpy(str_Op_Path[1], commandCompose[1]);
+		} else {
+			printf("cd folow is none\n");
+		}
+	} 
 	
 	ret = (strcmp(str_Op_Path[0], "cd")) ? ret : cd_wq(str_Op_Path);
 	//ret = (strcmp(str_Op_Path[0], "touch")) ? ret : touch_djm("none");
@@ -252,7 +256,6 @@ int commonCmd_djm(){
 	if(funcRet == 1){			//查询成功
 		//printf("cmd is exist in our program and done\n");
 	} else {					//查询失败
-		printf("serach failure ready to exec\n");
 		if(fork() == 0){
 			if((__switch = execvp(cmd, commandCompose)) == -1){
 				//perror("execvp error\n");
@@ -427,7 +430,7 @@ int commandControl(int __switch){
 /***** Info *****/
 /* Author:  */
 /* Function: 别名替换 */
-char *alias(char commanddStr[]){
+char *alias_zhj(char commanddStr[]){
 	return commanddStr;
 }
 
@@ -451,7 +454,7 @@ int getInputCommand(){
 	
 	/* 命令字符串 ->重命名->分割->调用 */
 	char resultAlias[100];
-	strcpy(resultAlias, alias(contentStr));
+	strcpy(resultAlias, alias_zhj(contentStr));
 	commandStrSplit(resultAlias);		/* split result put in global array '*commandCompose[]' */
 	
 	__switch = commandJudge();
