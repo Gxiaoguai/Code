@@ -14,10 +14,12 @@
 #include <unistd.h>
 #include <malloc.h>
 #include <sys/stat.h>
-//#include <time.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+//#include <time.h>
 //#include <grp.h>
 //#include <libgen.h>
 //#include "DbLinkList.h"
@@ -30,8 +32,17 @@
 #define MAX_PATH_LEN 100
 #define MODE_RW_UGO (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
+#define RL_PROMPT_STATR_IGNORE '\001'
+#define RL_PROMPT_END_IGNORE '\002'
+
+#define INDIGO_BLUE "\e[36;1m"
+#define GREEN "\e[32;1m"
+#define BLUE "\e[34;1m"
+#define CLOSE "\e[0m"
+
 /****** 全局量 ******/
 char *commandCompose[MAX_CMD_LEN] = {""};	/* 分割后的命令组成多字符串数组 */
+char prompt_global[MAX_CMD_LEN] = "";
 
 /****** 函数声明 ******/
 void sayHello();        					//进入提示
@@ -46,6 +57,8 @@ int commonCmd_djm();						//常规命令
 int pipeCmd_zhj();							// | 管道命令
 int redirectCmd_djm();						//< > 重定向命令
 int backstageCmd_djm();						//& 后台处理命令
+int showHistory_wq();						//打印history列表
+
 void commandStrSplit(char contentStr[]);	//对命令字符串分割
 void commandStrLinkAndSplit();				//对commandCompose[]连接重分割
 int commandJudge();							//对命令判断是否为特殊cmd(& | < >)
@@ -53,13 +66,14 @@ int commandControl();						//对命令判断应调用什么函数完成
 int getInputCommand();  					//获取输入命令
 void shell();           					//shell的总入口
 
-/****** 从store.c引入 ******/
+/****** alias部分 ******/
 void aliasInsert_zhj();						//插入alias存储区
 void printAlia_zhj();						//打印alias结果
 char * checkAlias_zhj(char *findstr);		//检查alias存储区
 char * judgeAlias_zhj(char *p);				//判断有无别名（需要checkAlias_zhj()）
 int alias_zhj();							//alias命令
 int unalias_zhj();							//unalias命令
+
 
 /****** 函数实现 ******/
 /***** Info *****/
@@ -90,11 +104,10 @@ void printPrefix(){
 	host = store_promptGet("hostname");
 	folder = store_promptGet("pathname");
 	root = store_promptGet("root");
-	printf("[\e[36;1mTUBShell\e[0m \e[32;1m%s@%s\e[0m:\e[34;1m%s\e[0m]%s ",user, host, folder, root);
-	//free(user);
-	//free(host);
-	//free(folder);
-	//free(root);
+	//printf("[\e[36;1mTUBShell\e[0m \e[32;1m%s@%s\e[0m:\e[34;1m%s\e[0m]%s ",user, host, folder, root);
+	//sprintf(prompt_global,"[TUBShell %s@%s: %s]%s ",user,host,folder,root);
+	sprintf(prompt_global,"[\001\e[36;1m\002TUBShell\001\e[0m\002 \001\e[32;1m\002%s@%s\001\e[0m\002:\001\e[34;1m\002%s\001\e[0m\002]%s ",user,host,folder,root);
+	//free(user); free(host); free(folder); free(root);
 }
 
 /***** Info *****/
@@ -179,8 +192,6 @@ int ls_djm(){
 		if(strtmp[0] == '.' || strtmp[0] == ' ')
 			continue;
 		printf("%s  ", strtmp);
-		//if(!((++i) % 6))
-			//printf("\n");
 	}
 	printf("\n");
 	closedir(dir);
@@ -235,6 +246,7 @@ int commonCmd_beforeExec_search(){
 	ret = (strcmp(cmd, "cd")) ? ret : cd_wq(str_Op_Path);
 	ret = (strcmp(cmd, "alias")) ? ret : alias_zhj();
 	ret = (strcmp(cmd, "unalias")) ? ret : unalias_zhj();
+	ret = (strcmp(cmd, "history")) ? ret : showHistory_wq();
 	//ret = (strcmp(cmd, "touch")) ? ret : touch_djm("none");
 	//ret = (strcmp(cmd, "gedit")) ? ret : gedit_djm("none");
 	//ret = (strcmp(cmd, "ls")) ? ret : gedit_djm("none");
@@ -305,6 +317,21 @@ int backstageCmd_djm(){
 	}
 	printf("Pid [\e[32;1m%d\e[0m]\n", pid);
 	return __switch;
+}
+
+/***** Info *****/
+/* Author: WQ */
+/* Function: 打印history列表 */
+int showHistory_wq(){
+	/* Note: 查看存储的history列表 */
+	long int i = 0, j = 0, m = 0;
+	HIST_ENTRY ** his;
+	his = history_list();
+	while(his[i] != NULL){
+		printf("%s\n", his[i]->line);
+		i++;
+	}
+	return 1;
 }
 
 /***** Info *****/
@@ -464,28 +491,33 @@ int getInputCommand(){
 	/* Note: 注意命令输入的结束符号 */
 	int i = 0, j = 0;				/* 用于for循环 */
 	int __switch = 1;				/* 判断控制调用开关 和 shell退出开关 */
-	char contentStr[100];			/* 存输入的数组 */
-	strcpy(contentStr, " ");		/* init */
-
-	fgets(contentStr, 100, stdin);	/* input command */
-	
+	//char contentStr[100];			/* 存输入的数组 */
+	//strcpy(contentStr, " ");		/* init */
+	//fgets(contentStr, 100, stdin);	/* input command */
+	/*
+	#define INDIGO_BLUE "\e[36;1m"
+	#define GREEN "\e[32;1m"
+	#define BLUE "\e[34;1m"
+	#define CLOSE "\e[0m"
+	*/
+	char * contentStr = readline(prompt_global);
+	//read_history(NULL);				/* 读./history文件 */
+	add_history(contentStr);
+	write_history(NULL);				/* 串输入到./history文件 */
+		
 	/* 判断是否为空回车 fgets()默认带'\0' */
-	if(strlen(contentStr) == 1){
+	if(strlen(contentStr) == 0){
 		//printf("this is enter\n");
 		return 1;
 	}
 	
-	//printf("before contentStr is *%s*\n", contentStr);
-	
 	/* fgets()默认带'\n',将其替换为\0 */
+	/*
 	while(contentStr[i] != '\n'){
 		i++;
 	}
 	contentStr[i] = '\0';
-	
-	//printf("after contentStr is *%s*\n", contentStr);
-	
-	//return 0;
+	*/
 	
 	/* 命令字符串 ->重命名->分割->调用 */
 	char resultAlias[MAX_CMD_LEN];
@@ -522,16 +554,6 @@ void shell(){
 
 int main(){
     /* 测试区 */
-    /*
-    store_commandInit();
-    store_commandPut("ls");
-    store_commandPut("cd");
-    store_commandPut("as");
-    store_commandPut("vi");
-    printf("the last cmd is %s\n", store_commandGet(1));
-    printf("the last cmd is %s\n", store_commandGet(2));
-    store_commandPrintAll();
-    */
     //return 0;
     /* 测试区 */
 
