@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <sys/wait.h>
 //#include <time.h>
 //#include <grp.h>
 //#include <libgen.h>
@@ -280,7 +281,7 @@ int commonCmd_djm(){
 			}
 		}
 	}
-	sleep(1);
+	wait(NULL);
 	return __switch;
 };
 
@@ -351,7 +352,7 @@ int pipeCmd_zhj(){
 		} else {
 			//waitpid(pid1,NULL,0);
 			//waitpid(pid2,NULL,0);
-			sleep(1);
+			wait(NULL);
 			return __switch;
 		}
 	}
@@ -360,7 +361,62 @@ int pipeCmd_zhj(){
 /***** Info *****/
 /* Author: DJM */
 /* Function: 实现重定向命令 */
-int redirectCmd_djm(){}
+int redirectCmd_djm(){
+	/* such as: ls -l > list.txt */
+	int i;
+	int pid, fd;
+	int redirectType = 1;
+	/* type 1 is '>', type 2 is '>>' */
+	
+	/*
+	for(i = 0; commandCompose[i] != NULL; i++){
+		printf("commandCompose is *%s*\n", commandCompose[i]);
+		continue;
+		if(!strcmp(commandCompose[i], ">") && !strcmp(commandCompose[i + 1], ">")){
+			redirectType = 2;
+			//break;
+		}
+	}
+	*/
+	
+	/* get filename */
+	i = 0;
+	while(commandCompose[i] != NULL){
+		i++;
+	}
+	char filename[MAX_CMD_LEN] = "";
+	strcpy(filename, commandCompose[i - 1]);
+	
+	/* change commandCompose[]*/
+	i = 0;
+	while(strcmp(commandCompose[i], ">")){
+		i++;
+	}
+	commandCompose[i] = NULL;
+	
+	pid = fork();
+	if(pid == 0){
+		close(1);
+		if(redirectType == 1){
+			fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+		} else {
+			fd = open(filename, O_CREAT | O_APPEND | O_WRONLY, 0644);
+		}
+		
+		if(execvp(commandCompose[0], commandCompose) == -1){
+		//if(execlp("ls", "ls", "-l", NULL) == -1){
+			perror("exec error\n");
+			exit(1);
+		}
+	} else if(pid > 0){
+		wait(NULL);
+		//system("cat output.txt");
+	} else {
+		perror("fork error\n");
+	}
+
+	return 1;
+}
 
 /***** Info *****/
 /* Author: DJM */
@@ -446,6 +502,7 @@ void commandStrSplit(char * contentStr){
 			
 			if((j + 1) >= strlen(contentStr)){
 				commandCompose[i++] = strtmp[k++];
+				len++;
 				break;
 			}
 		}
@@ -458,6 +515,7 @@ void commandStrSplit(char * contentStr){
 	/*
 	printf("contentStr len is %ld\n",strlen(contentStr));
 	printf("total len is %d\n",len);
+	
 	int sum = 0;
 	for(i = 0; sum < len; i++){
 		printf("第%d个分割 *%s*\n", i, commandCompose[i]);
@@ -532,7 +590,7 @@ int commandControl(int __switch){
 			__switch = pipeCmd_zhj();
 			break;
 		case 2:
-			printf("command %s is done\n", cmd);
+			__switch = redirectCmd_djm();
 			break;
 		case 3: 
 			__switch = backstageCmd_djm();
@@ -553,13 +611,9 @@ int getInputCommand(){
 	//char contentStr[100];			/* 存输入的数组 */
 	//strcpy(contentStr, " ");		/* init */
 	//fgets(contentStr, 100, stdin);	/* input command */
-	/*
-	#define INDIGO_BLUE "\e[36;1m"
-	#define GREEN "\e[32;1m"
-	#define BLUE "\e[34;1m"
-	#define CLOSE "\e[0m"
-	*/
+
 	char * contentStr = readline(prompt_global);
+	
 	//read_history(NULL);				/* 读./history文件 */
 	add_history(contentStr);
 	write_history(NULL);				/* 串输入到./history文件 */
