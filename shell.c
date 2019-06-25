@@ -612,9 +612,10 @@ int getInputCommand(){
 	//strcpy(contentStr, " ");		/* init */
 	//fgets(contentStr, 100, stdin);	/* input command */
 
+	clear_history();
+	read_history(NULL);				/* 读./history文件 */
 	char * contentStr = readline(prompt_global);
 	
-	//read_history(NULL);				/* 读./history文件 */
 	add_history(contentStr);
 	write_history(NULL);				/* 串输入到./history文件 */
 		
@@ -643,7 +644,7 @@ int getInputCommand(){
 	
 	strcpy(resultAlias, judgeAlias_zhj(contentStr));
 	//printf("alias result is *%s*\n", resultAlias);
-	
+	free(contentStr);
 	commandStrSplit(resultAlias);		/* split result put in global array '*commandCompose[]' */
 	
 	__switch = commandJudge();
