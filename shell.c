@@ -28,7 +28,7 @@
 /****** 自定义模块 ******/
 #include "store.h"
 
-#define MAX_NAME_LEN 100 
+#define MAX_NAME_LEN 100
 #define MAX_CMD_LEN 100
 #define MAX_PATH_LEN 100
 #define MODE_RW_UGO (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
@@ -47,6 +47,7 @@ char prompt_global[MAX_CMD_LEN] = "";
 
 /****** 函数声明 ******/
 void sayHello();        					//进入提示
+void shellInit();							//shell初始化
 void printPrefix();     					//打印段前缀 依赖getprompt_wq()
 void getprompt_wq();						//获取用户信息
 int cd_wq(char op_path[2][MAX_CMD_LEN/2]);	//cd 命令
@@ -82,7 +83,28 @@ int unalias_zhj();							//unalias命令
 /* Function: 用户进入TUBShell的入口声明 */
 void sayHello(){
 	/* Note: 打印进入了TUBShell的控制信息*/
-	printf("This is TUBShell\n");
+	printf("This is \e[36;1mTUBShell\e[0m\n");
+}
+
+/***** Info *****/
+/* Author: DJM */
+/* Function: 用户进入TUBShell的初始化 */
+void shellInit(){
+	commandCompose[0] = "alias";
+	commandCompose[1] = "ls='ls --color=auto'";
+	aliasInsert_zhj();
+	commandCompose[1] = "la='la -A'";
+	aliasInsert_zhj();
+	commandCompose[1] = "l='la -CF'";
+	aliasInsert_zhj();
+	commandCompose[1] = "grep='grep --color=auto'";
+	aliasInsert_zhj();
+	commandCompose[1] = "fgrep='fgrep --color=auto'";
+	aliasInsert_zhj();
+	commandCompose[1] = "egrep='egrep --color=auto'";
+	aliasInsert_zhj();
+	commandCompose[0] = "";
+	commandCompose[1] = "";
 }
 
 /***** Info *****/
@@ -127,7 +149,7 @@ void getprompt_wq(){
 	char hostname[MAX_NAME_LEN];
 	gethostname(hostname, sizeof(hostname));
 	store_promptPut(2, hostname);
-	
+
 	/* 获取当前目录 */
 	char pathname[MAX_PATH_LEN];
 	getcwd(pathname, MAX_PATH_LEN);
@@ -137,7 +159,7 @@ void getprompt_wq(){
 	} else{
 		store_promptPut(3, pathname);
 	}
-	
+
     /* 确认是否为超级用户 */
 	if (uid == 0) {
 		store_promptPut(4, "#");
@@ -156,9 +178,9 @@ int cd_wq(char op_path[2][MAX_CMD_LEN/2]){
 	int ret = 1;
 	struct passwd *pwd;
 	char pathname[MAX_PATH_LEN];					//储存路径名
-	pwd = getpwuid(getuid());						//获取用户信息 
-	
-	if(strcmp(op_path[1],"") == 0){					//如果第二个字符串为空，则代表进入根目录 
+	pwd = getpwuid(getuid());						//获取用户信息
+
+	if(strcmp(op_path[1],"") == 0){					//如果第二个字符串为空，则代表进入根目录
 		strcpy(pathname, pwd->pw_dir);				//获取pathname   pwd->pw_dir获取的目录都是/root
 		if(ret=(chdir(pathname)) == -1){			//如果有错
 			ret = -1;
@@ -170,11 +192,11 @@ int cd_wq(char op_path[2][MAX_CMD_LEN/2]){
 			ret = -1;
 			printf("TUBshell: cd: %s :No such file or directory\n", commandCompose[1]);
 			exit(1);
-		}	
+		}
 	}
-	
+
 	if(!ret)			//ret = 0; chdir() success
-		ret = 1; 
+		ret = 1;
 	return ret;
 }
 
@@ -242,16 +264,17 @@ int commonCmd_beforeExec_search(){
 		} else {
 			strcpy(str_Op_Path[1], commandCompose[1]);
 		}
-	} 
-	
+	}
+
 	ret = (strcmp(cmd, "cd")) ? ret : cd_wq(str_Op_Path);
 	ret = (strcmp(cmd, "alias")) ? ret : alias_zhj();
 	ret = (strcmp(cmd, "unalias")) ? ret : unalias_zhj();
 	ret = (strcmp(cmd, "history")) ? ret : showHistory_wq();
+	ret = (strcmp(cmd, "exit")) ? ret : 0;
 	//ret = (strcmp(cmd, "touch")) ? ret : touch_djm("none");
 	//ret = (strcmp(cmd, "gedit")) ? ret : gedit_djm("none");
 	//ret = (strcmp(cmd, "ls")) ? ret : gedit_djm("none");
-	
+
 	/* 保留日后用 */
 	/* ls_djm() cd_wq() touch_djm() gedit_djm() */
 	/* ls cd touch gedit */
@@ -264,12 +287,18 @@ int commonCmd_beforeExec_search(){
 /* Function: 实现常规命令 */
 int commonCmd_djm(){
 	int __switch = 0;		/* 常规命令标识为0的返回 */
-	int funcRet = -1;		/* 用于函数内部获取调用函数返回值 1/-1 success/failure */
+	int funcRet = -1;		/* 用于函数内部获取调用函数返回值 1/-1 success/failure 0/exit*/
 	char cmd[MAX_CMD_LEN];
 	strcpy(cmd ,commandCompose[0]);
 
 	funcRet = commonCmd_beforeExec_search();
 	
+	/* exit */
+	if(funcRet == 0){
+		printf("This is \e[36;1mTUBShell\e[0m exit\n");
+		return -1;
+	}
+
 	if(funcRet == 1){			//查询成功
 		//printf("cmd is exist in our program and done\n");
 	} else {					//查询失败
@@ -301,12 +330,12 @@ int pipeCmd_zhj(){
 	char *cmd2[MAX_CMD_LEN];
 	int i = 0;
 	int j = 0;
-	/*initialize*/	
+	/*initialize*/
 
 	while(strcmp(commandCompose[i], "|") != 0){
 		cmd1[i] = (char *)malloc(MAX_CMD_LEN * sizeof(char));
 		strcpy(cmd1[i], commandCompose[i]);
-		i++;	
+		i++;
 	}
 	cmd1[i] = 0;
 	i++;
@@ -326,12 +355,12 @@ int pipeCmd_zhj(){
     int fd[2];//fd[0]读端，fd[1]写端
     pipe(fd);
 	int flag;
-	
+
 	//创建子进程
     if((pid1 = fork()) == 0){
 		//子进程1，默认为pipe前的指令ls
-		dup2(fd[1], 1);//把标准输出流重定向到管道写端
-		close(fd[0]);//关闭管道的文件描述符
+		dup2(fd[1], 1);		//把标准输出流重定向到管道写端
+		close(fd[0]);		//关闭管道的文件描述符
 		close(fd[1]);
 		if((flag=execvp(cmd1[0], cmd1)) < 0){
 			printf("son:no such command %d", flag);
@@ -341,12 +370,12 @@ int pipeCmd_zhj(){
         //父进程，默认为pipe后的指令
         //waitpid(pid1,NULL,0);
 		if(pid2=fork() == 0){
-			dup2(fd[0], 0);//把标准输入流重定向到管道读端
+			dup2(fd[0], 0);		//把标准输入流重定向到管道读端
             close(fd[0]);
 			close(fd[1]);
 
             if((flag=execvp(cmd2[0], cmd2)) < 0){
-            	printf("father:no such command %d", flag);
+            	printf("father:no such command %d\n", flag);
             }
 			exit(EXIT_SUCCESS);
 		} else {
@@ -367,18 +396,29 @@ int redirectCmd_djm(){
 	int pid, fd;
 	int redirectType = 1;
 	/* type 1 is '>', type 2 is '>>' */
+	/* type 3 is '<', type 4 is '<<' */
 	
-	/*
 	for(i = 0; commandCompose[i] != NULL; i++){
-		printf("commandCompose is *%s*\n", commandCompose[i]);
-		continue;
+		//printf("commandCompose is *%s*\n", commandCompose[i]);
+		//continue;
 		if(!strcmp(commandCompose[i], ">") && !strcmp(commandCompose[i + 1], ">")){
 			redirectType = 2;
-			//break;
+			break;
+		}
+		if(!strcmp(commandCompose[i], ">") && strcmp(commandCompose[i + 1], ">")){
+			redirectType = 1;
+			break;
+		}
+		if(!strcmp(commandCompose[i], "<") && !strcmp(commandCompose[i + 1], "<")){
+			redirectType = 4;
+			break;
+		}
+		if(!strcmp(commandCompose[i], "<") && strcmp(commandCompose[i + 1], "<")){
+			redirectType = 3;
+			break;
 		}
 	}
-	*/
-	
+
 	/* get filename */
 	i = 0;
 	while(commandCompose[i] != NULL){
@@ -386,23 +426,30 @@ int redirectCmd_djm(){
 	}
 	char filename[MAX_CMD_LEN] = "";
 	strcpy(filename, commandCompose[i - 1]);
-	
+
 	/* change commandCompose[]*/
 	i = 0;
-	while(strcmp(commandCompose[i], ">")){
+	while(strcmp(commandCompose[i], ">") && strcmp(commandCompose[i], "<")){
 		i++;
 	}
 	commandCompose[i] = NULL;
-	
+
 	pid = fork();
 	if(pid == 0){
-		close(1);
 		if(redirectType == 1){
+			close(1);
 			fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
-		} else {
+		} else if(redirectType == 2){
+			close(1);
 			fd = open(filename, O_CREAT | O_APPEND | O_WRONLY, 0644);
+		} else if(redirectType == 3){
+			//close(1);
+			//fd = open(filename, O_TRUNC | O_RDONLY, 0644);
+		} else if(redirectType == 4){
+			//close(1);
+			//fd = open(filename, O_APPEND | O_RDONLY, 0644);
 		}
-		
+
 		if(execvp(commandCompose[0], commandCompose) == -1){
 		//if(execlp("ls", "ls", "-l", NULL) == -1){
 			perror("exec error\n");
@@ -427,10 +474,10 @@ int backstageCmd_djm(){
 	int __switch = 3;
 	char cmd[MAX_CMD_LEN];
 	strcpy(cmd ,commandCompose[0]);
-	
+
 	while(strcmp(commandCompose[++i], "&"));
 	commandCompose[i] = NULL;
-	
+
 	if((pid = fork()) == 0){
 		sleep(1);
 		printf("\n");
@@ -466,9 +513,9 @@ void commandStrSplit(char * contentStr){
 	int i = 0, j = 0;
 	int k = 0, m = 0;
 	char strtmp[25][25] = {""};
-	int switch_keepStr = 0;	/* 遇到左单引号，开开关(=1)，遇右单引号，关开关(=0) */	
+	int switch_keepStr = 0;	/* 遇到左单引号，开开关(=1)，遇右单引号，关开关(=0) */
 	int len = 0;			/* contentStr紧凑串(没有空格，换行)的长度 */
-	
+
 	for(j = 0; j < strlen(contentStr); j++){
 		if(contentStr[j] == ' ' && strlen(strtmp[k]) == 0){
 			continue;
@@ -482,11 +529,18 @@ void commandStrSplit(char * contentStr){
 				strtmp[k][m] = contentStr[j];
 			}
 		} else if(contentStr[j]=='|'||contentStr[j]=='>'||contentStr[j]=='<'||contentStr[j]=='&'){
-			if(strlen(strtmp[k]) != 0){
+			if(switch_keepStr == 0){
+				// no ' control
+				if(strlen(strtmp[k]) != 0){
+					commandCompose[i++] = strtmp[k++];
+				}
+				strtmp[k][0] = contentStr[j];
 				commandCompose[i++] = strtmp[k++];
+			} else {
+				// have ' control
+				for(m = 0; strtmp[k][m]; m++){}
+				strtmp[k][m] = contentStr[j];
 			}
-			strtmp[k][0] = contentStr[j];
-			commandCompose[i++] = strtmp[k++];
 		} else if(contentStr[j] != ' ' && contentStr[j] != '\n' ){
 			// set ' control
 			if(contentStr[j] == '\''){
@@ -496,10 +550,10 @@ void commandStrSplit(char * contentStr){
 					switch_keepStr = 0;
 				}
 			}
-			
+
 			for(m = 0; strtmp[k][m]; m++){}
 			strtmp[k][m] = contentStr[j];
-			
+
 			if((j + 1) >= strlen(contentStr)){
 				commandCompose[i++] = strtmp[k++];
 				len++;
@@ -510,12 +564,11 @@ void commandStrSplit(char * contentStr){
 			len++;
 	}
 	commandCompose[i] = NULL;
-	
+
 	/* 打印测试 */
 	/*
 	printf("contentStr len is %ld\n",strlen(contentStr));
 	printf("total len is %d\n",len);
-	
 	int sum = 0;
 	for(i = 0; sum < len; i++){
 		printf("第%d个分割 *%s*\n", i, commandCompose[i]);
@@ -570,6 +623,16 @@ int commandJudge(){
 	if(__switch == 0){
 		//printf("common command\n");
 	}
+	
+	/* before return revise __switch */
+	/* specially when cmd is "alias zhj='ls | grep .c' " */
+	char cmd[MAX_CMD_LEN];
+	strcpy(cmd ,commandCompose[0]);
+	if(__switch == 1 && !strcmp(cmd, "alias")){
+		//printf("this is a error which is alias conflict with pipe\n");
+		__switch = 0;
+	}
+	
 	return __switch;
 }
 
@@ -580,7 +643,7 @@ int commandControl(int __switch){
 	/* Note: __switch 为 0/1/2/3 分别代表 常规/管道/重定向/后台控制 命令 */
 	char cmd[MAX_CMD_LEN];
 	strcpy(cmd ,commandCompose[0]);
-	
+
 	/* 判断命令调用 */
 	switch(__switch){
 		case 0:
@@ -592,12 +655,12 @@ int commandControl(int __switch){
 		case 2:
 			__switch = redirectCmd_djm();
 			break;
-		case 3: 
+		case 3:
 			__switch = backstageCmd_djm();
 			break;
 		default: printf("command \'%s\' no exist\n", cmd);;
 	}
-	
+
 	return __switch;
 }
 
@@ -608,48 +671,41 @@ int getInputCommand(){
 	/* Note: 注意命令输入的结束符号 */
 	int i = 0, j = 0;				/* 用于for循环 */
 	int __switch = 1;				/* 判断控制调用开关 和 shell退出开关 */
+	
 	//char contentStr[100];			/* 存输入的数组 */
-	//strcpy(contentStr, " ");		/* init */
-	//fgets(contentStr, 100, stdin);	/* input command */
+	//fgets(contentStr, 100, stdin);/* input command */
 
 	clear_history();
 	read_history(NULL);				/* 读./history文件 */
 	char * contentStr = readline(prompt_global);
-	
+
 	add_history(contentStr);
 	write_history(NULL);				/* 串输入到./history文件 */
-		
-	/* 判断是否为空回车 fgets()默认带'\0' */
+
+	/* 判断是否为空回车 */
 	if(strlen(contentStr) == 0){
-		//printf("this is enter\n");
 		return 1;
 	}
 	
-	/* fgets()默认带'\n',将其替换为\0 */
-	/*
-	while(contentStr[i] != '\n'){
+	/* 判断是否为单/多空格回车 */
+	i = 0;
+	while(contentStr[i] == ' '){
 		i++;
 	}
-	contentStr[i] = '\0';
-	*/
-	
+	if( i == strlen(contentStr)){
+		return 1;
+	}
+
 	/* 命令字符串 ->重命名->分割->调用 */
 	char resultAlias[MAX_CMD_LEN];
-	
-	//测试通过
-	//commandCompose[0] = "alias";
-	//commandCompose[1] = "djm='ls -l'";
-	//aliasInsert_zhj();
-	//printAlia_zhj();
-	
+
 	strcpy(resultAlias, judgeAlias_zhj(contentStr));
-	//printf("alias result is *%s*\n", resultAlias);
 	free(contentStr);
 	commandStrSplit(resultAlias);		/* split result put in global array '*commandCompose[]' */
-	
+
 	__switch = commandJudge();
 	__switch = commandControl(__switch);	/* exec command */
-	
+
 	/* 因四种命令分别为 0 1 2 3 ，故+1使得继续运行TUBShell */
 	return (__switch + 1);
 }
@@ -660,6 +716,7 @@ int getInputCommand(){
 void shell(){
 	int running_switch = 1;
 	sayHello();
+	shellInit();
 	while(running_switch){
 		printPrefix();
 		running_switch = getInputCommand();		//根据输入的命令执行相应的动作
@@ -698,12 +755,12 @@ void aliasInsert_zhj(){
     struct Node *temp = (struct Node*)malloc(sizeof(struct Node));
     char str[MAX_CMD_LEN / 2];
     strcpy(str, commandCompose[1]);
-	
+
 	//插入
     char *tmp = "";
     tmp = strtok(str, "=");
     strcpy((temp->data).word, tmp);
-    
+
     /* 检测重名 */
 	char checkResult[MAX_CMD_LEN] = "";
 	strcpy(checkResult, checkAlias_zhj(str));		//进别名 出命令
@@ -722,11 +779,11 @@ void aliasInsert_zhj(){
         return;
     }
     /* 检测完毕 */
-    
+
     //无别名
     tmp = strtok(NULL, "'");
     strcpy((temp->data).mean, tmp);
-    
+
     currentRecord->next = temp;
     temp->next = NULL;
     currentRecord = currentRecord->next;
@@ -755,7 +812,7 @@ char * checkAlias_zhj(char *findstr){
     static char retStr[MAX_CMD_LEN] = "";
     strcpy(retStr, findstr);
     strcpy(exam, findstr);
-    
+
     while(p != NULL){
         if(strcmp(exam, (p->data).word) == 0){
             strcpy(retStr, (p->data).mean);
@@ -792,7 +849,7 @@ char * judgeAlias_zhj(char *cmdStr){
 /***** Info *****/
 /* Author: ZHJ */
 /* Function: 实现alias命令 */
-int alias_zhj(){
+int alias_zhj(){	
 	if(commandCompose[1] == NULL){
 		printAlia_zhj();                	//print all the relations
 	} else {
@@ -831,13 +888,6 @@ int unalias_zhj(){
     }
     return 1;
 }
-
-
-
-
-
-
-
 
 
 
