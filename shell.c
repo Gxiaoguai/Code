@@ -60,6 +60,7 @@ int pipeCmd_zhj();							// | 管道命令
 int redirectCmd_djm();						//< > 重定向命令
 int backstageCmd_djm();						//& 后台处理命令
 int showHistory_wq();						//打印history列表
+void TUBshellError_wq(char *cmd);			//命令无法识别，报错
 
 void commandStrSplit(char contentStr[]);	//对命令字符串分割
 void commandStrLinkAndSplit();				//对commandCompose[]连接重分割
@@ -325,6 +326,7 @@ int commonCmd_djm(){
 			if((__switch = execvp(cmd, commandCompose)) == -1){
 				//perror("execvp error\n");
 				printf("Command \'%s\' not found\n", cmd);
+				TUBshellError_wq(cmd);
 				exit(1);
 			}
 		}
@@ -519,13 +521,50 @@ int backstageCmd_djm(){
 int showHistory_wq(){
 	/* Note: 查看存储的history列表 */
 	long int i = 0, j = 0, m = 0;
-	HIST_ENTRY ** his;
-	his = history_list();
-	while(his[i] != NULL){
-		printf("%s\n", his[i]->line);
+	HIST_ENTRY ** cmdhistory;
+	cmdhistory = history_list();
+	while(cmdhistory[i] != NULL){
+		printf("%s\n", cmdhistory[i]->line);
 		i++;
 	}
 	return 1;
+}
+
+/***** Info *****/
+/* Author: WQ */
+/* Function: 报错提示 */
+void TUBshellError_wq(char * cmd){
+	if(strncmp(cmd,"ls",1) == 0){
+		printf("你是不是想输入——ls——\n");
+	}
+	if(strncmp(cmd,"alias",1) == 0){
+		printf("你是不是想输入——alias——\n");
+	}
+	if(strncmp(cmd,"unalias",1) == 0){
+		printf("你是不是想输入——unalias——\n");
+	}
+	if(strncmp(cmd,"history",1) == 0){
+		printf("你是不是想输入——history——\n");
+	}
+	if(strncmp(cmd,"exit",1) == 0){
+		printf("你是不是想输入—exit——\n"); 
+		printf("你是不是想输入——echo——\n");
+	}
+	if(strncmp(cmd,"cd",1) == 0){
+		printf("你是不是想输入——cd——\n");
+	}
+	if(strncmp(cmd,"gedit",1) == 0){
+		printf("你是不是想输入——gedit——\n");
+	}
+	if(strncmp(cmd,"cat",1) == 0){
+		printf("你是不是想输入——cat——\n");
+	}
+	if(strncmp(cmd,"touch",1) == 0){
+		printf("你是不是想输入——touch——\n");
+	}
+	if(strncmp(cmd,"pwd",1) == 0){
+		printf("你是不是想输入——pwd——\n");
+	} 
 }
 
 /***** Info *****/
