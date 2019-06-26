@@ -54,6 +54,7 @@ int cd_wq(char op_path[2][MAX_CMD_LEN/2]);	//cd 命令
 int ls_djm();								//ls 命令
 int touch_djm(char filename[]);				//touch 命令
 int gedit_djm(char filename[]);				//gedit 命令
+int help_wq();								//help 命令
 int commonCmd_beforeExec_search();			//exec外部调用之前，先查找我们做的命令实现
 int commonCmd_djm();						//常规命令
 int pipeCmd_zhj();							// | 管道命令
@@ -250,6 +251,30 @@ int gedit_djm(char filename[]){
 }
 
 /***** Info *****/
+/* Author: WQ */
+/* Function: 查找我们做的命令实现 */
+int help_wq(){
+	/* Note: 这个函数很“无聊”但是很重要 */
+	/* 它为用户打印myshell命令的帮助信息 */
+	/* 直接使用help就可以进行查看 */
+	printf("欢迎来到用户使用手册，哈哈哈!\n");
+	printf("下列命令格式是TUBshell所支持:\n");
+	printf("\n");
+	printf("bg:        bg [job_spec]                 execute commands in background\n");
+	printf("cd:        cd [dir]                      go to a specified directory\n");
+	printf("echo:      echo [arg ...]                print strings after echo,redirection is supported\n");
+	printf("exit:      exit                          quit the shell directly\n");
+	printf("fg:        fg [job_spec]                 execute commands in foreground\n");
+	printf("pwd:       pwd                           print the current working directory\n");
+	printf("umask:     umask [-p] [-S] [mode]        change the value of umask\n");
+	printf("dir:       dir [dir]                     list the file names in the target directory\n");
+	printf("history:   [-c] [-d offset] [n]          list the file names in the target directory\n");
+	printf("help:      help                          get help info of a sepcified command\n");
+	printf("[温馨提示] 此处省略很多行……\n");
+	return 1;
+}
+
+/***** Info *****/
 /* Author: DJM */
 /* Function: 查找我们做的命令实现 */
 int commonCmd_beforeExec_search(){
@@ -271,6 +296,7 @@ int commonCmd_beforeExec_search(){
 	ret = (strcmp(cmd, "alias")) ? ret : alias_zhj();
 	ret = (strcmp(cmd, "unalias")) ? ret : unalias_zhj();
 	ret = (strcmp(cmd, "history")) ? ret : showHistory_wq();
+	ret = (strcmp(cmd, "help")) ? ret : help_wq();
 	ret = (strcmp(cmd, "exit")) ? ret : 0;
 	//ret = (strcmp(cmd, "touch")) ? ret : touch_djm("none");
 	//ret = (strcmp(cmd, "gedit")) ? ret : gedit_djm("none");
