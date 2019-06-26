@@ -458,23 +458,26 @@ int redirectCmd_djm(){
 		if(redirectType == 1){
 			close(1);
 			fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+			if(execvp(commandCompose[0], commandCompose) == -1){
+				perror("exec error\n");
+				exit(1);
+			}
 		} else if(redirectType == 2){
-			close(1);
-			fd = open(filename, O_CREAT | O_APPEND | O_WRONLY, 0644);
-		} else if(redirectType == 3){
-			//freopen(filename, "r", stdin);
 			//close(1);
-			//fd = open(filename, O_TRUNC | O_RDONLY, 0644);
+			//fd = open(filename, O_CREAT | O_APPEND | O_WRONLY, 0644);
+		} else if(redirectType == 3){
+			fd = open(filename, O_CREAT | O_RDONLY, 0644);
+			dup2(fd, 0);
+			//close(fd);
+			if(execvp(commandCompose[0], commandCompose) == -1){
+				perror("exec error\n");
+				exit(1);
+			}
 		} else if(redirectType == 4){
-			//freopen(filename, "r", stdin);
 			//close(1);
 			//fd = open(filename, O_APPEND | O_RDONLY, 0644);
 		}
-		
-		if(execvp(commandCompose[0], commandCompose) == -1){
-			perror("exec error\n");
-			exit(1);
-		}
+
 	} else if(pid > 0){
 		wait(NULL);
 		//system("cat output.txt");
