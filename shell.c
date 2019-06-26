@@ -302,6 +302,25 @@ int commonCmd_djm(){
 	if(funcRet == 1){			//查询成功
 		//printf("cmd is exist in our program and done\n");
 	} else {					//查询失败
+		/* before exec we need to check $PATH when cmd is 'echo' */
+		if(!strcmp(cmd, "echo")){
+			char * cmdCompose1 = "";
+			cmdCompose1 = commandCompose[1];
+			char * nodollorStr = strstr(cmdCompose1, "$");
+			if(nodollorStr != NULL){
+				//printf("str have $ and str is %s\n", &nodollorStr[1]);
+				char * str = "";
+				str = getenv(&nodollorStr[1]);
+				if(str != NULL){
+					printf("%s\n", str);
+				}
+				return 1;
+			} else {
+				//commandCompose[1] = cmdCompose1;
+			}
+		}
+		
+		/* child process fork(), execvp() */
 		if(fork() == 0){
 			if((__switch = execvp(cmd, commandCompose)) == -1){
 				//perror("execvp error\n");
@@ -443,15 +462,16 @@ int redirectCmd_djm(){
 			close(1);
 			fd = open(filename, O_CREAT | O_APPEND | O_WRONLY, 0644);
 		} else if(redirectType == 3){
+			//freopen(filename, "r", stdin);
 			//close(1);
 			//fd = open(filename, O_TRUNC | O_RDONLY, 0644);
 		} else if(redirectType == 4){
+			//freopen(filename, "r", stdin);
 			//close(1);
 			//fd = open(filename, O_APPEND | O_RDONLY, 0644);
 		}
-
+		
 		if(execvp(commandCompose[0], commandCompose) == -1){
-		//if(execlp("ls", "ls", "-l", NULL) == -1){
 			perror("exec error\n");
 			exit(1);
 		}
@@ -725,8 +745,15 @@ void shell(){
 
 int main(){
     /* 测试区 */
-    //return 0;
+    /*
+    char * str = "";
+	str = getenv("PATH");
+	printf("$PATH is *%s*\n", str);
+	return 0;
+	*/
     /* 测试区 */
+    
+
 
     shell();
     return 0;
