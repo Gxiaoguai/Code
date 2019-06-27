@@ -61,7 +61,7 @@ int commonCmd_djm();						//常规命令
 int pipeCmd_zhj();							// | 管道命令
 int redirectCmd_djm();						//< > 重定向命令
 int backstageCmd_djm();						//& 后台处理命令
-int showHistory_wq();						//打印history列表
+int showHistory_wq(char str[2][50]);		//打印history列表
 void TUBshellError_wq(char *cmd);			//命令无法识别，报错
 
 void commandStrSplit(char contentStr[]);	//对命令字符串分割
@@ -293,11 +293,18 @@ int commonCmd_beforeExec_search(){
 			strcpy(str_Op_Path[1], commandCompose[1]);
 		}
 	}
+	
+	if(!strcmp(commandCompose[0], "history")){
+		if(commandCompose[1] == NULL){
+		} else {
+			strcpy(str_Op_Path[1], commandCompose[1]);
+		}
+	}
 
 	ret = (strcmp(cmd, "cd")) ? ret : cd_wq(str_Op_Path);
 	ret = (strcmp(cmd, "alias")) ? ret : alias_zhj();
 	ret = (strcmp(cmd, "unalias")) ? ret : unalias_zhj();
-	ret = (strcmp(cmd, "history")) ? ret : showHistory_wq();
+	ret = (strcmp(cmd, "history")) ? ret : showHistory_wq(str_Op_Path);
 	ret = (strcmp(cmd, "help")) ? ret : help_wq();
 	ret = (strcmp(cmd, "exit")) ? ret : 0;
 	//ret = (strcmp(cmd, "touch")) ? ret : touch_djm("none");
@@ -546,15 +553,34 @@ int backstageCmd_djm(){
 /***** Info *****/
 /* Author: WQ */
 /* Function: 打印history列表 */
-int showHistory_wq(){
+int showHistory_wq(char str[2][50]){
 	/* Note: 查看存储的history列表 */
 	long int i = 0, j = 0, m = 0;
 	HIST_ENTRY ** cmdhistory;
 	cmdhistory = history_list();
-	while(cmdhistory[i] != NULL){
-		printf("%s\n", cmdhistory[i]->line);
-		i++;
+	char cmd[MAX_CMD_LEN];
+	if(commandCompose[1] == NULL){
+		while(cmdhistory[i] != NULL){
+			printf("%s\n", cmdhistory[i]->line);
+			i++;
+		}
+	} else {
+		strcpy(cmd ,str[1]);
+		//printf("cmd is %s\n", cmd);
+		int num = atoi(cmd);
+		//printf("num is %d\n", num);
+		//return 1;
+		while(cmdhistory[i] != NULL){
+			i++;
+		}
+		
+		//cmdhistory[i] = NULL;
+		for(j = 0; j < num; j++){
+			printf("%s\n", cmdhistory[i-1]->line);
+			i--;
+		}
 	}
+	
 	return 1;
 }
 
@@ -816,9 +842,6 @@ void shell(){
 int main(){
     /* 测试区 */
     /*
-    char * str = "";
-	str = getenv("PATH");
-	printf("$PATH is *%s*\n", str);
 	return 0;
 	*/
     /* 测试区 */
@@ -977,7 +1000,7 @@ int unalias_zhj(){
             tmp = p->next;
             p->next = tmp->next;
            	tmp->next = NULL;
-            free(tmp);
+            //free(tmp);
             break;
         }
         p = p->next;
