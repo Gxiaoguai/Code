@@ -3,6 +3,7 @@
 *Description: a private shell for OS command by C
 *Author: DJM ZHJ WQ
 *Create Time: 2019.6.18
+*End Time: 2019.6.26
 **********************/
 
 /****** 库调用 ******/
@@ -271,6 +272,7 @@ int help_wq(){
 	printf("history:   [-c] [-d offset] [n]          list the file names in the target directory\n");
 	printf("help:      help                          get help info of a sepcified command\n");
 	printf("[温馨提示] 此处省略很多行……\n");
+	printf("[项目团队] CS162:DJM ZHJ，CS163:WQ\n");
 	return 1;
 }
 
@@ -716,7 +718,7 @@ int commandJudge(){
 	/* specially when cmd is "alias zhj='ls | grep .c' " */
 	char cmd[MAX_CMD_LEN];
 	strcpy(cmd ,commandCompose[0]);
-	if(__switch == 1 && !strcmp(cmd, "alias")){
+	if(__switch != 0 && !strcmp(cmd, "alias")){
 		//printf("this is a error which is alias conflict with pipe\n");
 		__switch = 0;
 	}
@@ -961,7 +963,7 @@ int unalias_zhj(){
     strcpy(checkResult, checkAlias_zhj(commandCompose[1]));
 
     if(strcmp(checkResult, commandCompose[1]) == 0){
-        printf("[unalias] \'%s\':not found", commandCompose[1]);
+        printf("[unalias] \'%s\':not found\n", commandCompose[1]);
         return 1;
     }
 
